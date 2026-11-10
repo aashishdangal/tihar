@@ -1,0 +1,23 @@
+# Large binary assets and raw renders
+blender/assets/
+renders/
+*.blend1
+*.blend2
+*.exr
+
+# Web
+web/node_modules/
+web/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Downloaded reference archives (large, licences unverified) — never commit
+refrences/
+
+# Numbered Blender saves stay local; only blender/scenes/<scene>.blend (latest) is tracked via LFS
+blender/scenes/*_v[0-9][0-9][0-9].blend
+
+# Local Claude Code settings
+.claude/settings.local.json
