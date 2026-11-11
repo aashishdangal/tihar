@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <title>तिहार — उज्यालोको कथा</title>
+    <script>document.documentElement.classList.add("js");</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <!-- first frame of the enter gate, desktop or mobile set by aspect ratio -->
+    <link rel="preload" as="fetch" crossorigin href="/frames/s00_enter/d/0001.webp" media="(min-aspect-ratio: 1001/1000)" />
+    <link rel="preload" as="fetch" crossorigin href="/frames/s00_enter/m/0001.webp" media="(max-aspect-ratio: 1/1)" />
+  </head>
+  <body>
+    <canvas id="stage" role="img" aria-label="अँध्यारोमा बलिरहेको माटोको एउटा दियो"></canvas>
+
+    <!-- Scene 0: enter gate -->
+    <section id="gate" class="gate" aria-label="प्रवेश">
+      <div class="gate__inner">
+        <div class="gate__head">
+          <h1 class="gate__title">तिहार</h1>
+          <p class="gate__sub">पाँच रात, उज्यालोको कथा</p>
+        </div>
+        <div class="gate__actions">
+          <button class="btn" type="button" data-enter="sound">भित्र जानुहोस्</button>
+          <button class="link" type="button" data-enter="silent">आवाज बिना हेर्नुहोस्</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- "Flame swells to warm white": hidden cut into Scene 1 -->
+    <div id="swell" class="swell" aria-hidden="true"></div>
+
+    <!-- placeholder until Scene 1 exists -->
+    <main id="story" class="story" aria-label="कथा" tabindex="-1" hidden>
+      <p class="story__soon">दृश्य १ — तयार हुँदैछ</p>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

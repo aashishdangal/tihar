@@ -50,6 +50,10 @@
 - Desktop: 1920×1080 WebP, quality ~72 → `web/public/frames/<scene>/d/0001.webp`
 - Mobile: centre crop to 9:16, scaled to 720×1280, WebP quality ~68 →
   `web/public/frames/<scene>/m/0001.webp`
+- Off-centre shots set their own mobile framing in `scripts/mobile_framing.json`
+  (s00: mode `fit`, the left 60% of the frame placed mid-screen with the frame's edge
+  colour above and below, so the diyo stays whole). The encoder prints where named
+  points (e.g. the flame) land in the mobile frame, for `web/src/scenes.json`.
 
 Budget: aim for ≤120 KB per desktop frame, ≤60 KB per mobile frame.
 `scripts/check_budget.js` warns when a scene's folder exceeds its budget.

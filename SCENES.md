@@ -24,6 +24,10 @@ explanation of Bhai Tika. Bali Raja is a king, so his scenes are in a palace.
 - **Light arc:** black → night → lamplit room → dawn → day → evening → lit night → glowing valley.
 - **Frame budget:** ~150–250 frames per scene, ~1,800 total, 1920×1080.
 - **Mobile:** keep key action in the centre safe zone (middle ~56% width) so frames crop to portrait.
+  Exception: s00 puts the diyo on the left third (title on the right); its mobile frames
+  use a custom framing (`scripts/mobile_framing.json`).
+- **s00 → s01 cut:** the web layer swells a glow from the flame to a full-screen warm white
+  `#FFF4E0` (`--cream`). Scene 1's first frame must start on that same flat warm white.
 - **Pause point:** one per scene; scroll holds while the caption shows.
 
 ## Scenes
