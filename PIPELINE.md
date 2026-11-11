@@ -47,16 +47,17 @@
 
 `scripts/encode_frames.sh <scene>` produces two sets from `renders/<scene>/`:
 
-- Desktop: 1920×1080 WebP, quality 100 (lossy) → `web/public/frames/<scene>/d/0001.webp`
-- Mobile: centre crop to 9:16, scaled to 720×1280, WebP quality 95 →
+- Desktop: 1920×1080 WebP, cwebp `-q 100 -sharp_yuv` → `web/public/frames/<scene>/d/0001.webp`
+- Mobile: centre crop to 9:16, scaled to 720×1280, cwebp `-q 100 -sharp_yuv` →
   `web/public/frames/<scene>/m/0001.webp`
 - Off-centre shots set their own mobile framing in `scripts/mobile_framing.json`
   (s00: mode `fit`, the left 60% of the frame placed mid-screen with the frame's edge
   colour above and below, so the diyo stays whole). The encoder prints where named
   points (e.g. the flame) land in the mobile frame, for `web/src/scenes.json`.
 
-Budget: ≤250 KB per desktop frame, ≤120 KB per mobile frame (raised 2026-11-11: q72 showed
-blocks in dark gradients; lossless is ~850 KB/frame, too heavy).
+Budget: ≤300 KB per desktop frame, ≤150 KB per mobile frame (raised 2026-11-11: q72 showed
+blocks in dark gradients). Lossy q100 is the WebP ceiling (~93 KB for s00); near-lossless and
+lossless are ~820–850 KB/frame. To optimize later, lower -q per scene.
 `scripts/check_budget.js` warns when a scene's folder exceeds its budget.
 
 ## 4. Hidden-cut checklist

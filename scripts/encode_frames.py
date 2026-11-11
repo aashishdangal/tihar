@@ -1,18 +1,48 @@
 """PNG -> WebP for one scene (see PIPELINE.md section 3).
 
-renders/<scene>/0001.png -> web/public/frames/<scene>/d/0001.webp  (1920x1080, q100)
-                         -> web/public/frames/<scene>/m/0001.webp  (720x1280,  q95)
+renders/<scene>/0001.png -> web/public/frames/<scene>/d/0001.webp  (1920x1080, q100 sharp_yuv)
+                         -> web/public/frames/<scene>/m/0001.webp  (720x1280,  q100 sharp_yuv)
 
 Mobile framing comes from scripts/mobile_framing.json (per scene); default is the spec's
 centre crop to 9:16. Mode "fit" is for shots whose subject is off-centre (s00: diyo on the
 left third): crop columns x0..x1 of the frame at full height, scale to 720 wide, place it at
 center_y, and fill above/below with the frame's own edge colour (feathered).
 """
+import glob
 import json
+import os
 import pathlib
+import shutil
+import subprocess
 import sys
+import tempfile
 
 from PIL import Image
+
+# cwebp (libwebp, winget Google.Libwebp) gives -sharp_yuv: cleaner colour edges than Pillow at q100.
+CWEBP = os.environ.get("CWEBP") or shutil.which("cwebp") or next(iter(glob.glob(os.path.expandvars(
+    r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Google.Libwebp_*\libwebp-*\bin\cwebp.exe"))), None)
+
+
+def save_webp(im_or_path, dest, q):
+    """Encode to WebP: cwebp -q <q> -sharp_yuv if available, else Pillow."""
+    if CWEBP is None:
+        im = im_or_path if isinstance(im_or_path, Image.Image) else Image.open(im_or_path).convert("RGB")
+        im.save(dest, "WEBP", quality=q, method=6)
+        return
+    tmp = None
+    if isinstance(im_or_path, Image.Image):
+        fd, tmp = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        im_or_path.save(tmp)
+        im_or_path = tmp
+    try:
+        subprocess.run([CWEBP, "-quiet", "-q", str(q), "-m", "6", "-sharp_yuv", str(im_or_path), "-o", str(dest)],
+                       check=True)
+    finally:
+        if tmp:
+            os.remove(tmp)
+
 
 scene = sys.argv[1]
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -21,9 +51,9 @@ out = root / "web" / "public" / "frames" / scene
 framing = json.loads((root / "scripts" / "mobile_framing.json").read_text(encoding="utf-8"))
 cfg = framing.get(scene, {"mode": "centre"})
 MW, MH, FEATHER = 720, 1280, 48
-# q72/q68 (old spec) left visible blocks in dark gradients. Lossy q100 is ~84 KB/frame; lossless
-# is ~850 KB/frame (too heavy for ~1,800 frames), so q100 is the practical ceiling.
-Q_D, Q_M = 100, 95
+# q72/q68 (old spec) left visible blocks in dark gradients. Lossy q100 + sharp_yuv is ~93 KB/frame
+# and is the ceiling for lossy WebP; near-lossless and lossless are ~820-850 KB/frame (render grain).
+Q_D, Q_M = 100, 100
 
 
 def mobile_centre(im):
@@ -75,12 +105,13 @@ dt = mt = 0
 for p in frames:
     im = Image.open(p).convert("RGB")
     d = out / "d" / f"{p.stem}.webp"
-    im.save(d, "WEBP", quality=Q_D, method=6)
+    save_webp(p, d, Q_D)
     m = out / "m" / f"{p.stem}.webp"
-    mobile(im).save(m, "WEBP", quality=Q_M, method=6)
+    save_webp(mobile(im), m, Q_M)
     dt += d.stat().st_size
     mt += m.stat().st_size
 n = len(frames)
+print(f"encoder: {CWEBP or 'Pillow'}")
 print(f"{n} frames -> {out}  d {dt/1e6:.1f} MB ({dt/n/1e3:.0f} KB/frame)  m {mt/1e6:.1f} MB ({mt/n/1e3:.0f} KB/frame)")
 for name, (px, py) in cfg.get("points", {}).items():
     mx, my = mobile_point(px, py, 1920, 1080)

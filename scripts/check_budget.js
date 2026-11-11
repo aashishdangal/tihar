@@ -1,11 +1,11 @@
 // Warn when a scene's encoded frames exceed the budget in PIPELINE.md:
-// <= 250 KB per desktop frame (d/), <= 120 KB per mobile frame (m/).
+// <= 300 KB per desktop frame (d/), <= 150 KB per mobile frame (m/).
 // Usage: node scripts/check_budget.js        (exit code 1 if any scene is over)
 const fs = require("fs");
 const path = require("path");
 
 const FRAMES = path.join(__dirname, "..", "web", "public", "frames");
-const BUDGET_KB = { d: 250, m: 120 };
+const BUDGET_KB = { d: 300, m: 150 };
 
 if (!fs.existsSync(FRAMES)) {
   console.log("no frames yet:", FRAMES);
