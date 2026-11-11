@@ -60,11 +60,29 @@ body {
 
 .gate__title {
   margin: 0;
-  font-weight: 800;
-  font-size: clamp(64px, 9vw, 168px);
-  line-height: 1.3;
   color: var(--cream);
-  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.55);
+  line-height: 0;
+}
+
+/* title drawn from AMS Gourav Bold outlines (legacy font, so never live text) */
+.gate__title-art {
+  display: block;
+  height: clamp(96px, 12vw, 220px);
+  width: auto;
+  overflow: visible;
+  filter: drop-shadow(0 2px 18px rgba(0, 0, 0, 0.55));
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .gate__sub {
@@ -152,8 +170,9 @@ body {
     align-items: center;
     margin-top: 0;
   }
-  .gate__title {
-    font-size: clamp(56px, 17vw, 120px);
+  .gate__title-art {
+    height: clamp(88px, 26vw, 170px);
+    margin: 0 auto;
   }
   .gate__sub {
     font-size: clamp(18px, 5vw, 26px);
@@ -162,8 +181,8 @@ body {
 
 /* short landscape screens (phones turned sideways) */
 @media (min-aspect-ratio: 1001/1000) and (max-height: 500px) {
-  .gate__title {
-    font-size: 52px;
+  .gate__title-art {
+    height: 76px;
   }
   .gate__actions {
     margin-top: 12px;

@@ -26,3 +26,8 @@ blender/scenes/pyro_cache/
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# AMS Gourav font files: "All rights reserved", only its SVG outlines are shipped
+**/ams*.ttf
+**/ams*.woff2
+**/AMS*.ttf

@@ -125,5 +125,6 @@ blender.exe <file.blend> --python scripts/blender_start_mcp.py   # open Blender 
 ## Open items
 
 - Submission deadline: unknown — ask the user.
-- AMS Gourav Bold: need the .ttf and confirmation that its licence allows this use.
+- AMS Gourav Bold: licence is "All rights reserved" (no free licence found). The user chose to
+  use it for the big title only, as SVG paths (2026-11-11); see CREDITS.md. Never commit the .ttf.
 - Captions need a native-speaker proofread before launch.
