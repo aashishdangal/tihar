@@ -50,6 +50,23 @@ Detailed specs live in `docs/`. Read the relevant file before working on a part:
   full sequence.
 - Test-render 3–5 frames at low samples before any full scene render.
 
+## Realism check (render-critic agent)
+
+After every test render or full render of a scene, run the **`render-critic`** agent
+(`.claude/agents/render-critic.md`) on a representative frame, e.g.
+"render-critic: compare `renders/s00_enter/0048.png` — clay diyo burning at night, close-up".
+
+It finds 2–3 real photographs of the same subject on the web, builds a side-by-side sheet
+with `scripts/compare_render.py`, measures brightness/contrast/warmth/saturation/clipping, and
+writes an element-by-element report with a Blender fix for each problem:
+
+- `renders/<scene>/compare/<frame>_vs_ref.png`: side-by-side sheet (ours left, refs right)
+- `renders/<scene>/compare/<frame>_vs_ref.md`: report + top 3 fixes
+- `renders/<scene>/compare/refs/`: downloaded reference photos (comparison only, never assets)
+
+Show the user the sheet and the top fixes; apply fixes only after the user agrees.
+The agent never edits the .blend or runs Blender itself.
+
 ## Git / GitHub
 
 - Repo: https://github.com/aashishdangal/tihar (private).
@@ -101,6 +118,8 @@ scripts/         encode_frames.sh, check_budget.js
 cd web && npm install && npm run dev      # local site
 bash scripts/encode_frames.sh s05_laxmi   # PNG → WebP (desktop + mobile)
 node scripts/check_budget.js              # warn if any scene exceeds its MB budget
+python scripts/compare_render.py <render.png> <ref1> [ref2 ...] --out <sheet.png>   # side-by-side + stats
+blender.exe <file.blend> --python scripts/blender_start_mcp.py   # open Blender and start the MCP server
 ```
 
 ## Open items

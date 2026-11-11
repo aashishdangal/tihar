@@ -18,6 +18,11 @@ refrences/
 
 # Numbered Blender saves stay local; only blender/scenes/<scene>.blend (latest) is tracked via LFS
 blender/scenes/*_v[0-9][0-9][0-9].blend
+blender/scenes/*_v[0-9][0-9][0-9]_*.blend
+
+# Blender simulation caches (s00 fire VDBs are ~1.3 GB); regenerate locally
+blender/scenes/cache/
+blender/scenes/pyro_cache/
 
 # Local Claude Code settings
 .claude/settings.local.json
