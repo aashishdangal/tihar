@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | Wordmark तिहार | top-left | Mukta 800, 24px |
 | अध्यायहरू button | top-right | opens chapter menu |
-| आवाज बन्द / आवाज खुला toggle | bottom-left | muted by default |
+| Sound toggle (icon only: speaker / crossed speaker) | bottom-left | 48px round; `aria-label="आवाज"` + `aria-pressed`. On by default: entering the site is the user gesture that starts audio |
 | Diyo progress bar | bottom-right | 5 SVG diyos: unlit / active / lit |
 | Caption block | bottom-centre, max 600px | gold label 15px/800 + text 23px/600; fade in 400 ms, out 300 ms |
 | Cursor sparks | canvas overlay | small marigold particles following the pointer; off on touch |

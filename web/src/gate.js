@@ -1,10 +1,9 @@
-// Scene 0 enter gate: two choices (with / without sound), then the hidden cut into
-// Scene 1: the flame "swells to warm white" (SCENES.md). Scene 1 must start on --cream.
-
-import { setSound } from "./sound.js";
+// Scene 0 enter gate: one "light the wick" control (sound is the HUD toggle), then the hidden
+// cut into Scene 1: the flame "swells to warm white" (SCENES.md). Scene 1 must start on --cream.
 
 const SWELL_PX = 200; // element size; the solid cream core is the inner 35% of its radius
 const CORE = 0.35;
+const WICK_MS = 650; // the wick burns through (CSS .enter.is-lit) before the swell starts
 
 export function initGate({ flamePoint, reduceMotion, onEntered }) {
   const gate = document.getElementById("gate");
@@ -12,10 +11,15 @@ export function initGate({ flamePoint, reduceMotion, onEntered }) {
   const story = document.getElementById("story");
   let leaving = false;
 
-  async function enter(withSound) {
+  const enterBtn = gate.querySelector("[data-enter]");
+
+  async function enter() {
     if (leaving) return;
     leaving = true;
-    setSound(withSound);
+    if (!reduceMotion()) {
+      enterBtn.classList.add("is-lit");
+      await new Promise((r) => setTimeout(r, WICK_MS));
+    }
     gate.inert = true;
     gate.classList.add("is-leaving");
 
@@ -47,6 +51,5 @@ export function initGate({ flamePoint, reduceMotion, onEntered }) {
     story.focus({ preventScroll: true });
   }
 
-  gate.querySelector('[data-enter="sound"]').addEventListener("click", () => enter(true));
-  gate.querySelector('[data-enter="silent"]').addEventListener("click", () => enter(false));
+  enterBtn.addEventListener("click", enter);
 }

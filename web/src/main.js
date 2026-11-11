@@ -3,6 +3,7 @@ import scenes from "./scenes.json";
 import { FrameSequence } from "./frames.js";
 import { Stage } from "./stage.js";
 import { initGate } from "./gate.js";
+import { initSoundToggle } from "./sound.js";
 
 const s0 = scenes.find((s) => s.id === "s00_enter");
 const stage = new Stage(document.getElementById("stage"));
@@ -49,6 +50,8 @@ window.addEventListener("resize", () => {
   stage.resize();
   useSet(pickSet());
 });
+
+initSoundToggle();
 
 initGate({
   flamePoint: () => stage.toScreen(s0.points.flame[set]),
