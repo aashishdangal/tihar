@@ -89,7 +89,7 @@ body {
   margin: 0;
   font-weight: 800;
   font-size: clamp(110px, 13vw, 240px);
-  line-height: 1.3;
+  line-height: 1.1; /* tight under the word so सुरु sits close beneath it */
   color: var(--cream);
   text-shadow: 0 2px 28px var(--shade);
 }
@@ -99,7 +99,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin-top: clamp(24px, 5vh, 56px);
+  margin-top: 3vh; /* 5% of the screen lower than tucked-in (-2vh) */
 }
 
 /* ---- "your breath": the सुरु control (the boy's face breathes in, then blows) ---- */
