@@ -6,40 +6,110 @@ import { initGate } from "./gate.js";
 import { initSoundToggle } from "./sound.js";
 
 const s0 = scenes.find((s) => s.id === "s00_enter");
+const sb = scenes.find((s) => s.id === "s00_blowout");
 const stage = new Stage(document.getElementById("stage"));
 const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 const pickSet = () => (window.innerWidth / window.innerHeight <= 1 ? "m" : "d"); // portrait -> mobile frames
 
-let seq = null;
+const CROSSFADE_MS = 150; // loop frame -> blow-out frame 1 (both open on the same flame pose)
+const DECODE_BUDGET = 2; // WEB.md: never decode more than 2 frames per animation frame
+const BLOW_WAIT_MS = 2000; // if the blow-out isn't loaded by then, fall back to a fade
+
 let set = null;
-let running = true;
+let loop = null; // FrameSequence, s00_enter (96-frame loop)
+let blow = null; // FrameSequence, s00_blowout (72 frames, the hidden cut into Scene 1)
+let phase = "loop"; // loop -> blow -> done
+let lastLoopBmp = null;
+let blowT0 = 0;
+let blowDone = null; // resolves when the blow-out has played
+let blowAsked = 0;
 const t0 = performance.now();
 
 function useSet(next) {
   if (next === set) return;
-  seq?.close();
+  loop?.close();
+  blow?.close();
   set = next;
-  seq = new FrameSequence({ id: s0.id, count: s0.frames, set });
-  seq.load();
+  loop = new FrameSequence({ id: s0.id, count: s0.frames, set });
+  blow = new FrameSequence({ id: sb.id, count: sb.frames, set, maxDecoded: 16 });
+  // the loop first; the blow-out downloads behind it (mostly dark frames, small)
+  loop.load().then(() => blow.load());
 }
 
 function markReady() {
   document.body.classList.add("is-ready");
 }
 
-// Scene 0 loops at its own frame rate; reduced motion holds the first frame.
-function tick(now) {
-  if (!running) return;
-  const i = reduce.matches ? 0 : Math.floor(((now - t0) / 1000) * s0.fps) % s0.frames;
-  let budget = 2; // WEB.md: never decode more than 2 frames per animation frame
-  for (let k = 0; k < 6 && budget > 0; k++) if (seq.decode((i + k) % s0.frames)) budget--;
-  const bmp = seq.nearest(i, true);
-  if (bmp) {
-    stage.draw(bmp, s0.focus[set]);
-    markReady();
+function decodeAhead(sequence, from, n, loopIt, budget) {
+  for (let k = 0; k < n && budget > 0; k++) {
+    const i = loopIt ? (from + k) % sequence.count : from + k;
+    if (i < sequence.count && sequence.decode(i)) budget--;
   }
-  seq.evict(i, true);
+  return budget;
+}
+
+function tick(now) {
+  if (phase === "done") return;
+
+  if (phase === "loop") {
+    // Scene 0 loops at its own frame rate; reduced motion holds the first frame
+    const i = reduce.matches ? 0 : Math.floor(((now - t0) / 1000) * s0.fps) % s0.frames;
+    let budget = decodeAhead(loop, i, 6, true, DECODE_BUDGET);
+    decodeAhead(blow, 0, 4, false, budget); // keep the first blow-out frames ready for the click
+    const bmp = loop.nearest(i, true);
+    if (bmp) {
+      stage.draw(bmp, s0.focus[set]);
+      lastLoopBmp = bmp;
+      markReady();
+    }
+    loop.evict(i, true);
+  } else {
+    // blow-out: starts once its first frame is decoded, then plays in real time
+    if (!blowT0) {
+      blow.decode(0);
+      if (blow.bitmaps.has(0)) blowT0 = now;
+      else if (now - blowAsked > BLOW_WAIT_MS) {
+        // frames not here in time (slow network): fade the last loop frame to black instead
+        const a = Math.max(0, 1 - (now - blowAsked - BLOW_WAIT_MS) / 600);
+        stage.ctx.fillStyle = "#000";
+        stage.ctx.fillRect(0, 0, stage.canvas.width, stage.canvas.height);
+        if (lastLoopBmp && a > 0) stage.draw(lastLoopBmp, s0.focus[set], a);
+        if (a === 0) {
+          phase = "done";
+          loop.close();
+          blow.close();
+          blowDone();
+          return;
+        }
+      } else if (lastLoopBmp) stage.draw(lastLoopBmp, s0.focus[set]);
+    }
+    if (blowT0) {
+      const t = now - blowT0;
+      const j = Math.min(sb.frames - 1, Math.floor((t / 1000) * sb.fps));
+      decodeAhead(blow, j, 8, false, DECODE_BUDGET);
+      const bmp = blow.nearest(j);
+      const xf = Math.min(1, t / CROSSFADE_MS);
+      if (xf < 1 && lastLoopBmp) stage.draw(lastLoopBmp, s0.focus[set]);
+      if (bmp) stage.draw(bmp, sb.focus[set], xf);
+      blow.evict(j);
+      if (t > (sb.frames / sb.fps) * 1000 + 120) {
+        phase = "done";
+        loop.close();
+        blow.close();
+        blowDone();
+        return;
+      }
+    }
+  }
   requestAnimationFrame(tick);
+}
+
+/** Play the blow-out from wherever the loop is; resolves on the last (black) frame. */
+function playBlowout() {
+  if (phase !== "loop") return Promise.resolve();
+  phase = "blow";
+  blowAsked = performance.now();
+  return new Promise((resolve) => (blowDone = resolve));
 }
 
 useSet(pickSet());
@@ -48,16 +118,19 @@ setTimeout(markReady, 1500); // show the gate text even if frames are slow
 
 window.addEventListener("resize", () => {
   stage.resize();
-  useSet(pickSet());
+  if (phase === "loop") useSet(pickSet());
 });
 
 initSoundToggle();
 
 initGate({
-  flamePoint: () => stage.toScreen(s0.points.flame[set]),
   reduceMotion: () => reduce.matches,
+  playBlowout,
   onEntered: () => {
-    running = false;
-    seq.close();
+    if (phase !== "done") {
+      phase = "done";
+      loop.close();
+      blow.close();
+    }
   },
 });

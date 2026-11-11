@@ -22,8 +22,9 @@ export class Stage {
     this.ctx.imageSmoothingQuality = "high";
   }
 
-  /** focus: [x, y] in 0..1 of the image, kept as close to the screen centre as cover allows. */
-  draw(bmp, focus = [0.5, 0.5]) {
+  /** focus: [x, y] in 0..1 of the image, kept as close to the screen centre as cover allows.
+   *  alpha < 1 draws over the previous frame (crossfades). */
+  draw(bmp, focus = [0.5, 0.5], alpha = 1) {
     const cw = this.canvas.width;
     const ch = this.canvas.height;
     const s = Math.max(cw / bmp.width, ch / bmp.height);
@@ -31,7 +32,9 @@ export class Stage {
     const h = bmp.height * s;
     const x = clamp(cw / 2 - focus[0] * w, cw - w, 0);
     const y = clamp(ch / 2 - focus[1] * h, ch - h, 0);
+    this.ctx.globalAlpha = alpha;
     this.ctx.drawImage(bmp, x, y, w, h);
+    this.ctx.globalAlpha = 1;
     const d = this.dpr;
     this.fit = { x: x / d, y: y / d, w: w / d, h: h / d };
   }

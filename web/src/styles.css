@@ -21,6 +21,7 @@
 
   /* motion: enter slow, exit fast; one easing family */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.9, 0.45);
   --dur-press: 120ms;
   --dur-hover: 200ms;
   --dur-exit: 350ms;
@@ -175,28 +176,49 @@ body {
 
 /* hover / keyboard focus / click: the flame runs along the wick and lights it */
 .enter:hover .enter__burn,
-.enter:focus-visible .enter__burn,
-.enter.is-lit .enter__burn {
+.enter:focus-visible .enter__burn {
   transform: scaleX(1);
 }
 .enter:hover .enter__run,
-.enter:focus-visible .enter__run,
-.enter.is-lit .enter__run {
+.enter:focus-visible .enter__run {
   transform: translateX(0);
 }
 .enter:hover .enter__label,
-.enter:focus-visible .enter__label,
-.enter.is-lit .enter__label {
+.enter:focus-visible .enter__label {
   color: var(--white-hot);
   text-shadow: 0 0 22px var(--marigold-glow-strong), var(--text-shade);
 }
-.enter.is-lit .enter__flame {
-  animation: flare var(--wick-ms) var(--ease-out) forwards;
+/* ---- the gust (click): same wind as the rendered blow-out, blowing toward screen-right ---- */
+
+.gate__ch {
+  display: inline-block;
 }
 
-@keyframes flare {
-  60% { transform: scale(1.3, 1.6); }
-  100% { transform: scale(2.2, 2.8); opacity: 0; }
+.gate.is-blown .gate__ch {
+  animation: blow-away 900ms var(--ease-in) forwards;
+  animation-delay: calc(120ms + var(--i) * 90ms);
+}
+
+.gate.is-blown .enter__flame {
+  animation: snuff 320ms var(--ease-in) forwards;
+}
+
+.gate.is-blown .enter__label,
+.gate.is-blown .enter__wick {
+  animation: blow-away 700ms var(--ease-in) 60ms forwards;
+}
+
+@keyframes blow-away {
+  to {
+    transform: translate(140px, -12px) skewX(-10deg);
+    opacity: 0;
+    filter: blur(8px);
+  }
+}
+
+@keyframes snuff {
+  40% { transform: rotate(60deg) scale(1.2, 0.7); opacity: 0.9; }
+  100% { transform: rotate(80deg) scale(0.1, 0.1); opacity: 0; }
 }
 
 .enter:focus-visible {
@@ -256,13 +278,6 @@ body {
 }
 .js body.is-ready .sound {
   opacity: 1;
-}
-
-/* after entering the page is warm white: dark icon */
-body.is-entered .sound {
-  color: var(--night);
-  border-color: var(--night);
-  background: none;
 }
 
 /* entrance, once the first frame has painted (only when JS runs):
@@ -329,40 +344,8 @@ body.is-entered .sound {
   }
 }
 
-/* ---------- hidden cut: flame swells to warm white ---------- */
+/* ---------- after the cut: black (Scene 1 rises out of it) ---------- */
 
-.swell {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(
-    circle closest-side,
-    var(--white-hot) 0%,
-    var(--cream) 35%,
-    var(--marigold-glow-strong) 62%,
-    var(--marigold-fade) 100%
-  );
-  will-change: transform, opacity;
-}
-
-.swell--fade {
-  inset: 0;
-  left: 0;
-  top: 0;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: var(--cream);
-}
-
-body.is-entered {
-  background: var(--cream);
-}
 body.is-entered #stage {
   display: none;
 }
@@ -374,7 +357,7 @@ body.is-entered #stage {
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--night);
+  color: var(--cream);
   outline: none;
 }
 
@@ -385,8 +368,7 @@ body.is-entered #stage {
 .story__soon {
   font-weight: 600;
   font-size: 22px;
-  color: var(--night);
-  opacity: 0.55;
+  color: var(--muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -399,7 +381,11 @@ body.is-entered #stage {
   .sound {
     transition: none;
   }
-  .enter__flame {
+  .enter__flame,
+  .gate.is-blown .gate__ch,
+  .gate.is-blown .enter__flame,
+  .gate.is-blown .enter__label,
+  .gate.is-blown .enter__wick {
     animation: none;
   }
 }

@@ -1,47 +1,48 @@
-// Scene 0 enter gate: one "light the wick" control (sound is the HUD toggle), then the hidden
-// cut into Scene 1: the flame "swells to warm white" (SCENES.md). Scene 1 must start on --cream.
+// Scene 0 enter gate. Clicking सुरु starts the hidden cut into Scene 1 (SCENES.md): a gust
+// blows the diyo out (rendered frames, s00_blowout) and the same wind carries the page's own
+// light away: the wick flame under सुरु is snuffed and the letters of तिहार drift right and
+// dissolve. The cut ends on black; Scene 1 rises out of it.
 
-const SWELL_PX = 200; // element size; the solid cream core is the inner 35% of its radius
-const CORE = 0.35;
-const WICK_MS = 650; // the wick burns through (CSS .enter.is-lit) before the swell starts
+const WIND_MS = 1300; // longest page-side wind animation (CSS); the blow-out itself is 3 s
 
-export function initGate({ flamePoint, reduceMotion, onEntered }) {
+/** Wrap each grapheme cluster (ति · हा · र) in a span so the wind can take them one by one.
+ *  Devanagari clusters are shaped on their own, so splitting at cluster edges keeps the glyphs;
+ *  no letter-spacing is added (CLAUDE.md rule 2). */
+function splitTitle(el) {
+  const text = el.textContent.trim();
+  const seg = new Intl.Segmenter("ne", { granularity: "grapheme" });
+  el.setAttribute("aria-label", text);
+  el.textContent = "";
+  [...seg.segment(text)].forEach(({ segment }, i) => {
+    const span = document.createElement("span");
+    span.className = "gate__ch";
+    span.setAttribute("aria-hidden", "true");
+    span.style.setProperty("--i", i);
+    span.textContent = segment;
+    el.append(span);
+  });
+}
+
+export function initGate({ reduceMotion, playBlowout, onEntered }) {
   const gate = document.getElementById("gate");
-  const swell = document.getElementById("swell");
   const story = document.getElementById("story");
+  const stageEl = document.getElementById("stage");
+  const enterBtn = gate.querySelector("[data-enter]");
   let leaving = false;
 
-  const enterBtn = gate.querySelector("[data-enter]");
+  if (typeof Intl !== "undefined" && Intl.Segmenter) splitTitle(gate.querySelector(".gate__title"));
 
   async function enter() {
     if (leaving) return;
     leaving = true;
-    if (!reduceMotion()) {
-      enterBtn.classList.add("is-lit");
-      await new Promise((r) => setTimeout(r, WICK_MS));
-    }
     gate.inert = true;
-    gate.classList.add("is-leaving");
 
     if (reduceMotion()) {
-      swell.classList.add("swell--fade");
-      await swell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: "forwards" }).finished;
+      gate.classList.add("is-leaving");
+      await stageEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, fill: "forwards" }).finished;
     } else {
-      const [fx, fy] = flamePoint();
-      const W = window.innerWidth;
-      const H = window.innerHeight;
-      const far = Math.max(Math.hypot(fx, fy), Math.hypot(W - fx, fy), Math.hypot(fx, H - fy), Math.hypot(W - fx, H - fy));
-      const end = far / ((SWELL_PX / 2) * CORE);
-      swell.style.left = `${fx - SWELL_PX / 2}px`;
-      swell.style.top = `${fy - SWELL_PX / 2}px`;
-      await swell.animate(
-        [
-          { transform: "scale(0.12)", opacity: 0 },
-          { transform: "scale(0.5)", opacity: 1, offset: 0.2 },
-          { transform: `scale(${end})`, opacity: 1 },
-        ],
-        { duration: 1900, easing: "cubic-bezier(.55,0,.8,.3)", fill: "forwards" }
-      ).finished;
+      gate.classList.add("is-blown"); // CSS: wick flame snuffed, letters carried off by the wind
+      await Promise.all([playBlowout(), new Promise((r) => setTimeout(r, WIND_MS))]);
     }
 
     document.body.classList.add("is-entered");

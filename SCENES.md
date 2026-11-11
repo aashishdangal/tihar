@@ -26,15 +26,15 @@ explanation of Bhai Tika. Bali Raja is a king, so his scenes are in a palace.
 - **Mobile:** keep key action in the centre safe zone (middle ~56% width) so frames crop to portrait.
   Exception: s00 puts the diyo on the left third (title on the right); its mobile frames
   use a custom framing (`scripts/mobile_framing.json`).
-- **s00 → s01 cut:** the web layer swells a glow from the flame to a full-screen warm white
-  `#FFF4E0` (`--cream`). Scene 1's first frame must start on that same flat warm white.
+- **s00 → s01 cut:** a gust blows the diyo out (s00_blowout ends on pure black). Scene 1's first
+  frame must start on pure black and rise out of it (stars first, then the valley).
 - **Pause point:** one per scene; scroll holds while the caption shows.
 
 ## Scenes
 
 | # | Scene | Setting and camera | Caption(s) | Out (hidden cut) |
 | --- | --- | --- | --- | --- |
-| 0 | Enter gate | Black, one diyo flame (loop, not scrolled) | तिहार (Mukta) · "light the wick" control सुरु · sound icon (HUD) | Wick burns, then the diyo flame swells to warm white |
+| 0 | Enter gate | Black, one diyo flame (loop, not scrolled) | तिहार (Mukta) · "light the wick" control सुरु · sound icon (HUD) | Wind blows the diyo out (rendered s00_blowout, 3 s: flame tears off, ember, smoke wisp, black); the page's text is carried off by the same gust |
 | 1 | Hero | Aerial misty valley at night, pagodas, stars; drifts down. "तिहार" forms from sparks | तिहार · उज्यालोको पर्व — पाँच दिन। एउटी बहिनी, जसले यमराजलाई पर्खन भनिन्। | Dive into low cloud (fog) |
 | 2 | Legend | Through a carved palace window into the royal chamber; Bali Raja on his deathbed, crown set aside; Jamuna with a diyo; Yamaraj in the doorway | कथा १/२ — धेरै पहिले, जमुनाका दाजु बलि राजा अन्तिम अवस्थामा थिए। · कथा २/२ — यमराज उनलाई लिन आउँदा, जमुनाले आफ्नो पूजा नसकिएसम्म पर्खन बिन्ती गरिन्। | Crow on the sill lifts off, wing wipes the lens |
 | 3 | Day 1 Kaag | Brick rooftops at sunrise; crow lands at a leaf plate of rice and sel roti | दिन १ · काग तिहार — यमराजका दूत कागलाई खुवाइन्छ, ताकि नराम्रो खबर टाढा रहोस्। | Tilt down into dark alley shadow |
