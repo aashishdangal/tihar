@@ -23,15 +23,53 @@
           <h1 class="gate__title">तिहार</h1>
         </div>
         <div class="gate__actions">
-          <!-- "light the wick": a small flame runs along the wick on hover/focus; on click a gust
-               blows out the diyo (rendered) and this little flame with it -->
-          <button class="enter" type="button" data-enter>
-            <span class="enter__label">सुरु</span>
-            <span class="enter__wick" aria-hidden="true">
-              <span class="enter__burn"></span>
-              <span class="enter__run"><span class="enter__flame"></span></span>
+          <!-- "your breath": press and hold = the figure breathes in, let go = it blows the diyo out
+               (a click / Enter / screen-reader activate plays a full breath) -->
+          <button class="breath" type="button" data-enter aria-describedby="breath-hint">
+            <span class="breath__circle" aria-hidden="true">
+              <span class="breath__glow"></span>
+              <svg class="breath__ring" viewBox="0 0 120 120" focusable="false">
+                <circle class="breath__track" cx="60" cy="60" r="56" pathLength="1" />
+                <circle class="breath__fill" cx="60" cy="60" r="56" pathLength="1" />
+              </svg>
+              <!-- a stylised line figure in profile facing right, in a dhaka topi; faces stay soft.
+                   Drawn facing left, then mirrored. -->
+              <svg class="man" viewBox="0 0 120 120" focusable="false">
+                <defs>
+                  <pattern id="dhaka" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(8)">
+                    <path d="M2.5 0.4 L4.6 2.5 L2.5 4.6 L0.4 2.5 Z" />
+                  </pattern>
+                </defs>
+                <g transform="translate(120 0) scale(-1 1) translate(7 9) scale(0.88)">
+                  <g class="man__body">
+                    <path d="M28 112 C32 96 44 89 54 87 M66 87 C78 89 89 96 93 112" />
+                    <path class="man__collar" d="M54 87 L63 105 M66 87 L59 98" />
+                  </g>
+                  <g class="man__head">
+                    <path d="M66 86 C67 78 73 72 76 64 C79 58 80 52 79 46" />
+                    <path d="M41 42 C39 44 38 46 39 48 L34 56 L39 58" />
+                    <path d="M39 64 C40 68 41 71 44 73 C48 75 52 75 54 79 L54 86" />
+                    <path class="man__eye" d="M45 48 Q48 50 51 48" />
+                    <path class="man__ear" d="M66 51 C70 51 71 59 66 61" />
+                    <path class="man__moustache" d="M38.9 59 Q42 57.9 44.6 59.2 Q46.4 60.2 47.4 58.8" />
+                    <path class="man__lips" d="M39 60.4 Q38.3 62.2 39.6 63.6" />
+                    <ellipse class="man__mouth" cx="36.8" cy="61.6" rx="2.1" ry="2.4" />
+                    <path class="man__cheek" d="M46 60 C42 62 42 67 46 69" />
+                    <!-- dhaka topi: slants up toward the back, patterned, with a folded band -->
+                    <path class="man__topi" d="M39.6 42 L41.2 29 Q60 22.5 80.8 20.5 L80.4 47 Q60 38.5 39.6 42 Z" />
+                    <path class="man__topi-band" d="M40.4 37 Q60 32 80.6 41" />
+                    <g class="man__inhale">
+                      <path d="M14 50 L24 52" />
+                      <path d="M11 56 L24 56" />
+                      <path d="M14 62 L24 60" />
+                    </g>
+                  </g>
+                </g>
+              </svg>
             </span>
+            <span class="breath__label">सुरु</span>
           </button>
+          <p id="breath-hint" class="breath__hint">थिचिराख्नुहोस्, अनि छोड्नुहोस्</p>
         </div>
       </div>
     </section>
@@ -42,6 +80,7 @@
       <svg class="sound__icon sound__icon--on" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
       <svg class="sound__icon sound__icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
     </button>
+
 
 
     <!-- placeholder until Scene 1 exists -->

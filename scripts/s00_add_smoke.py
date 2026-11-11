@@ -3,8 +3,7 @@
 Run: blender.exe -b s00_enter_v066_realfire.blend --python scripts/s00_add_smoke.py -- <out.blend> [resolution]
 
 Mantaflow gas sim over the blow-out frames only (101-172): a 1.5 mm emitter at the wick tip
-releases smoke when the flame dies (frame ~117) and fades by ~150; a wind field pushes it toward
-screen-right (strong during the gust, then a drift). The ember barely lights anything, so a faint
+releases smoke when the flame dies (frame ~117) and fades by ~150; a wind field pushes it downwind (strong during the gust, then a drift). The ember barely lights anything, so a faint
 cool backlight, light-linked to the smoke only, makes the wisp readable; it fades with the scene.
 Cache: //cache/s00_smoke (git-ignored).
 """
@@ -25,8 +24,9 @@ F_OUT = 118                # first frame without flame (s00_render_headless.py: 
 coll = bpy.data.collections.get("FX") or s.collection
 
 cam = s.camera
+WIND_SIGN = 1    # +1: gust toward screen-right (v067, shipped). v068 tried -1 (left); dropped
 r = cam.matrix_world.col[0].xyz
-r = Vector((r.x, r.y, 0)).normalized()          # screen-right in world (downwind)
+r = Vector((r.x, r.y, 0)).normalized() * WIND_SIGN   # downwind direction in world
 
 
 def get_or_new_mesh_obj(name, make):

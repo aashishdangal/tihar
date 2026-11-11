@@ -160,10 +160,13 @@ ENVELOPE_ON = True   # v063 False; v064 back on with the v060 flame
 
 # ---------------------------------------------------------------------------------------------
 # Blow-out (the hidden cut into Scene 1): frames 101-172, after the loop (1-96), same camera.
-# A gust from screen-left leans the flame to the right, it tears and goes out (~frame 117), the
+# A gust (direction WIND_SIGN) leans the flame over, it tears and goes out (~frame 117), the
 # wick tip glows as an ember, and everything fades to pure black by frame 166.
 # Frame 101 = loop frame 1, so the web can crossfade from any loop frame into it.
 BLOW_START = 101
+# +1: the gust goes toward screen-right (v067, the shipped frames; the सुरु figure faces right).
+# v068 tried -1 (toward screen-left) and was dropped.
+WIND_SIGN = 1
 BLOW_LEN = 72
 VDB_OFFSET_LOOP = 64                      # loop frame f shows cache frame f + 64
 VDB_OFFSET_BLOW = VDB_OFFSET_LOOP - (BLOW_START - 1)   # blow-out frame 101 shows the same cache frame as loop frame 1
@@ -186,7 +189,7 @@ def add_blowout():
     fill = bpy.data.objects["L_S00_Fill"]
     cam = s.camera
     r = cam.matrix_world.col[0].xyz          # camera right in world
-    r = V((r.x, r.y, 0)).normalized()
+    r = V((r.x, r.y, 0)).normalized() * WIND_SIGN   # downwind direction
     base_loc = V((TIP.x, TIP.y, TIP.z + FLAME_DZ))
 
     def key_pivot(f, lean, wm, hm, drift):

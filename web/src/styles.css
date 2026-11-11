@@ -94,125 +94,239 @@ body {
   margin-top: clamp(24px, 5vh, 56px);
 }
 
-/* ---- "light the wick" enter control ---- */
+/* ---- "your breath": the सुरु control (a figure that breathes in, then blows) ---- */
 
-.enter {
-  --wick-ms: 650ms;
+.breath {
+  --p: 0; /* breath drawn in, 0..1 (breath.js) */
+  --size: clamp(112px, 8.5vw, 150px);
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  min-height: 48px;
-  /* "सुरु" is short: keep the wick long enough for the flame to run */
-  min-width: clamp(160px, 12vw, 230px);
-  padding: 6px 2px 10px;
-  text-align: left;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: none;
   color: var(--cream);
   cursor: pointer;
-  touch-action: manipulation;
+  touch-action: none; /* a long press must not scroll or zoom */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.enter__label {
-  font: 700 clamp(28px, 2.3vw, 40px) / 1.35 var(--font);
-  text-shadow: var(--text-shade);
-  transition:
-    color var(--dur-hover) var(--ease-out),
-    text-shadow var(--wick-ms) var(--ease-out);
-}
-
-/* the wick: a thin line under the words */
-.enter__wick {
+.breath__circle {
   position: relative;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--cream-line);
+  display: block;
+  width: var(--size);
+  height: var(--size);
 }
 
-/* the lit part of the wick grows from the left */
-.enter__burn {
+/* warm air gathering: swells with the breath, breathes slowly while idle */
+.breath__glow {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--marigold), var(--white-hot));
-  box-shadow: 0 0 12px var(--marigold-glow-strong);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--wick-ms) var(--ease-out);
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--marigold-glow-strong), var(--marigold-fade));
+  opacity: calc(0.3 + var(--p) * 0.6);
+  transform: scale(calc(0.55 + var(--p) * 0.7));
+  pointer-events: none;
+  animation: idle-breath 3.6s ease-in-out infinite;
 }
 
-/* a full-width track; its right end carries the flame. Idle: shifted left so the flame
-   sits at the wick's start; lit: slides right so the flame reaches the end */
-.enter__run {
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  transition: transform var(--wick-ms) var(--ease-out);
+@keyframes idle-breath {
+  50% { scale: 1.12; }
 }
 
-.enter__flame {
-  position: absolute;
-  right: -6px;
-  bottom: 1px;
-  width: 13px;
-  height: 22px;
-  border-radius: 50% 50% 45% 45% / 62% 62% 38% 38%;
-  background: radial-gradient(ellipse at 50% 72%, var(--white-hot) 0 22%, var(--marigold) 58%, var(--marigold-fade) 72%);
-  filter: drop-shadow(0 0 6px var(--marigold));
-  transform-origin: 50% 100%;
-  animation: flicker 1.4s ease-in-out infinite alternate;
-}
-
-@keyframes flicker {
-  0% { transform: scale(1, 1) rotate(-2deg); }
-  35% { transform: scale(0.94, 1.1) rotate(2deg); }
-  70% { transform: scale(1.04, 0.95) rotate(-1deg); }
-  100% { transform: scale(0.97, 1.14) rotate(3deg); }
-}
-
-/* hover / keyboard focus / click: the flame runs along the wick and lights it */
-.enter:hover .enter__burn,
-.enter:focus-visible .enter__burn {
-  transform: scaleX(1);
-}
-.enter:hover .enter__run,
-.enter:focus-visible .enter__run {
-  transform: translateX(0);
-}
-.enter:hover .enter__label,
-.enter:focus-visible .enter__label {
-  color: var(--white-hot);
-  text-shadow: 0 0 22px var(--marigold-glow-strong), var(--text-shade);
-}
-/* ---- the gust (click): same wind as the rendered blow-out, blowing toward screen-right ---- */
-
-.gate__ch {
-  display: inline-block;
-}
-
-/* the wind itself is driven frame by frame from gate.js (same clock as the rendered blow-out);
-   here we only stop the idle flicker and hover transitions so they don't fight it */
-.gate.is-blown .enter__flame {
+.breath.is-holding .breath__glow,
+.breath.is-blowing .breath__glow {
   animation: none;
 }
-.gate.is-blown .enter__label,
-.gate.is-blown .enter__wick,
-.gate.is-blown .enter__run,
-.gate.is-blown .enter__burn {
-  transition: none;
-}
-.gate.is-blown .gate__ch,
-.gate.is-blown .enter__label,
-.gate.is-blown .enter__wick {
-  will-change: transform, opacity, filter;
+
+.breath__ring,
+.man {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-.enter:focus-visible {
-  outline-offset: 8px;
+.breath__ring {
+  transform: rotate(-90deg);
+}
+
+.breath__track,
+.breath__fill {
+  fill: none;
+  stroke-width: 1.6; /* viewBox units: ~1.8 px at the default size */
+}
+
+.breath__track {
+  stroke: var(--cream-line);
+  transition: stroke var(--dur-hover) var(--ease-out);
+}
+
+.breath__fill {
+  stroke: var(--marigold);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--p));
+  opacity: clamp(0, calc(var(--p) * 40), 1); /* no round-cap dot at zero breath */
+  filter: drop-shadow(0 0 6px var(--marigold));
+}
+
+.breath.is-full .breath__fill {
+  animation: held 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes held {
+  to { filter: drop-shadow(0 0 12px var(--marigold)); }
+}
+
+/* the figure: cream line art, round strokes; the dhaka topi carries the one accent colour */
+.man path,
+.man ellipse {
+  fill: none;
+  stroke: var(--cream);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.man .man__topi {
+  fill: url(#dhaka);
+  stroke-width: 2.4;
+}
+
+.man pattern path {
+  fill: none;
+  stroke: var(--marigold);
+  stroke-width: 0.9;
+}
+
+.man .man__topi-band,
+.man .man__collar {
+  stroke-width: 1.8;
+}
+
+.man .man__moustache {
+  stroke-width: 2.2;
+}
+
+.man {
+  filter: drop-shadow(0 0 3px var(--shade));
+}
+
+/* breathing in: shoulders rise, head tilts back a little */
+.man__body {
+  transform: translateY(calc(var(--p) * -3px));
+  transition: transform 160ms var(--ease-out);
+}
+
+.man__head {
+  transform-box: view-box;
+  transform-origin: 60px 86px;
+  transform: translateY(calc(var(--p) * -3px)) rotate(calc(var(--p) * 7deg));
+  transition: transform 160ms var(--ease-out);
+  animation: idle-head 3.6s ease-in-out infinite;
+}
+
+@keyframes idle-head {
+  50% { translate: 0 -1px; }
+}
+
+/* air drawn in through the nose while holding */
+.man__inhale path {
+  stroke-width: 1.6;
+  stroke-dasharray: 4 20;
+  opacity: 0;
+}
+
+.breath.is-holding:not(.is-full) .man__inhale path {
+  opacity: calc(0.25 + var(--p) * 0.6);
+  animation: inhale 0.7s linear infinite;
+}
+.breath.is-holding .man__inhale path:nth-child(2) { animation-delay: -0.23s; }
+.breath.is-holding .man__inhale path:nth-child(3) { animation-delay: -0.46s; }
+
+@keyframes inhale {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* cheeks fill near the end of the breath */
+.man__cheek {
+  transform-box: fill-box;
+  transform-origin: right center;
+  opacity: clamp(0, calc((var(--p) - 0.55) * 3), 1);
+  transform: scaleX(clamp(0.3, calc(var(--p) * 1.2), 1));
+}
+
+/* lips: closed until the blow, then pursed into a small "o" */
+.man__mouth {
+  opacity: 0;
+}
+
+.breath.is-blowing .man__lips {
+  opacity: 0;
+}
+.breath.is-blowing .man__mouth {
+  opacity: 1;
+}
+.breath.is-blowing .man__cheek {
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+}
+.breath.is-blowing .man__head {
+  animation: none;
+  transform: rotate(-6deg) translateX(-2px);
+  transition: transform 140ms var(--ease-out);
+}
+.breath.is-blowing .man__body {
+  transform: translateY(1px);
+}
+
+.breath__label {
+  position: relative;
+  font: 700 clamp(24px, 1.8vw, 32px) / 1.35 var(--font);
+  color: var(--cream);
+  text-shadow: 0 0 calc(var(--p) * 26px) var(--marigold-glow-strong), var(--text-shade);
+}
+
+.breath:hover .breath__track,
+.breath:focus-visible .breath__track {
+  stroke: var(--cream);
+}
+
+.breath:focus-visible {
+  outline-offset: 6px;
+}
+
+.breath__hint {
+  margin: 6px 0 0;
+  width: var(--size);
+  text-align: center;
+  font: 600 14px / 1.5 var(--font);
+  color: var(--muted);
+  text-shadow: var(--text-shade);
+  transition: opacity var(--dur-hover) var(--ease-out);
+}
+
+.breath.is-holding + .breath__hint,
+.breath.is-blowing + .breath__hint {
+  opacity: 0;
+}
+
+/* the wind on the letters is driven frame by frame from gate.js (same clock as the rendered
+   blow-out); stop idle animations so they don't fight it */
+.gate.is-blown .gate__ch,
+.gate.is-blown .breath,
+.gate.is-blown .breath__hint {
+  will-change: transform, opacity, filter;
 }
 
 /* ---- sound toggle (HUD, bottom-left; stays after entering) ---- */
@@ -316,8 +430,8 @@ body {
     align-items: center;
     margin-top: 0;
   }
-  .enter {
-    text-align: center;
+  .breath__hint {
+    width: auto;
   }
   .gate__title {
     font-size: clamp(80px, 25vw, 150px);
@@ -365,13 +479,15 @@ body.is-entered #stage {
   .js .gate__title,
   .js .gate__actions,
   .gate.is-leaving,
-  .enter__burn,
-  .enter__run,
-  .enter__label,
+  .breath__track,
+  .breath__hint,
   .sound {
     transition: none;
   }
-  .enter__flame {
+  .breath__glow,
+  .breath.is-full .breath__fill,
+  .man__head,
+  .breath.is-holding .man__inhale path {
     animation: none;
   }
 }
