@@ -1,11 +1,12 @@
-// Scene 0 enter gate. The viewer blows the diyo out: press and hold सुरु and the little figure in
-// the dhaka topi breathes in; let go and it blows (breath.js). The rendered blow-out (s00_blowout,
+// Scene 0 enter gate. The viewer blows the diyo out: press and hold सुरु and the boy in the
+// dhaka topi breathes in; let go and it blows (breath.js). The rendered blow-out (s00_blowout,
 // gust toward screen-right, the way the figure faces) plays, and the same wind carries the page's
 // letters off. The page side is driven by the blow-out's own clock (setGust gets the current
 // blow-out frame), using the render's gust curve, so text and flame move together.
 // The cut ends on black; Scene 1 rises out of it.
 
 import { initBreath } from "./breath.js";
+import boySvg from "./assets/boy-head.svg?raw";
 
 // The render's gust (scripts/s00_render_headless.py GUST): blow-out frame k -> flame lean (deg)
 // and light multiplier. The flame is gone from frame 17.
@@ -68,6 +69,7 @@ export function initGate({ reduceMotion, playBlowout, onEntered }) {
   const hint = gate.querySelector(".breath__hint");
   const title = gate.querySelector(".gate__title");
 
+  breathBtn.querySelector("[data-boy]").innerHTML = boySvg;
   if (typeof Intl !== "undefined" && Intl.Segmenter) splitTitle(title);
   const chars = [...title.querySelectorAll(".gate__ch")];
   if (!chars.length) chars.push(title);

@@ -15,7 +15,7 @@ site's श्रेय (credits) page; this file is the source for that page.
 
 | Item | By | Date | Notes (permission from people recorded?) |
 | --- | --- | --- | --- |
-| | | | |
+| सुरु boy (four faces: calm, breathing in, cheeks puffed, blowing) | the owner's own mockup (refrences/Tihar Diya and Playful Nepali Boys.png, local) | 2026-11-11 | Heads traced to vector with scripts/trace_boy.py --heads; not a real person |
 
 ## Story note for the credits page
 

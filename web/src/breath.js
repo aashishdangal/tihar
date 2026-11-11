@@ -1,5 +1,6 @@
-// The सुरु "breath" control: press and hold to breathe in (the ring fills, the glow swells),
-// let go to blow, and the gust goes from the control to the diyo.
+// The सुरु "breath" control: press and hold and the boy's face breathes in (head back, then
+// cheeks puffed; the ring fills), let go and he blows the diyo out. Each face change is a
+// crossfade with a small spring (CSS) and a soft pulse of the ring.
 // Holding is never required: a quick click/tap, Enter/Space, or a screen-reader "activate"
 // plays a full breath automatically. Letting go before BLOW_MIN just lets the breath out.
 
@@ -8,6 +9,7 @@ const AUTO_MS = 520; // the automatic breath for a tap / keyboard / assistive te
 const DRAIN_MS = 450; // breath let out without blowing
 const TAP_MS = 220; // a press shorter than this is a tap
 const BLOW_MIN = 0.6; // enough breath to blow the diyo out
+const CHEEKS_AT = 0.8; // the boy switches from "arms wide" to "cheeks puffed"
 
 const easeOut = (x) => 1 - (1 - x) * (1 - x);
 const breathe = (x) => x * x * (3 - 2 * x); // slow start, faster middle, slow finish: ~0.7 s to BLOW_MIN
@@ -20,10 +22,27 @@ export function initBreath(button, { onBlow }) {
   let done = false;
   let lastInput = 0; // time of the last pointer/key press (to ignore the follow-up click)
 
+  let pulseTimer = 0;
+  /** the ring pulses softly whenever the face changes */
+  const pulse = () => {
+    button.classList.remove("is-change");
+    void button.offsetWidth; // restart the animation
+    button.classList.add("is-change");
+    clearTimeout(pulseTimer);
+    pulseTimer = setTimeout(() => button.classList.remove("is-change"), 450);
+  };
+  const toggle = (cls, on) => {
+    if (button.classList.contains(cls) !== on) {
+      button.classList.toggle(cls, on);
+      if (cls === "is-cheeks") pulse();
+    }
+  };
+
   const set = (v) => {
     p = Math.max(0, Math.min(1, v));
     button.style.setProperty("--p", p.toFixed(3));
-    button.classList.toggle("is-full", p >= 1);
+    toggle("is-full", p >= 1);
+    toggle("is-cheeks", p >= CHEEKS_AT); // near the top of the breath: cheeks puffed
   };
 
   /** animate p to `to` over `ms`, then call `then` */
@@ -46,6 +65,7 @@ export function initBreath(button, { onBlow }) {
     cancelAnimationFrame(raf);
     button.classList.remove("is-holding");
     button.classList.add("is-blowing");
+    pulse();
     onBlow(p);
   }
 
@@ -60,6 +80,7 @@ export function initBreath(button, { onBlow }) {
     pressing = true;
     pressAt = lastInput = performance.now();
     button.classList.add("is-holding");
+    pulse();
     tween(1, BREATHE_MS * (1 - p), breathe);
   }
 
@@ -69,6 +90,7 @@ export function initBreath(button, { onBlow }) {
     if (performance.now() - pressAt < TAP_MS) return autoBreath();
     if (p >= BLOW_MIN) return blow();
     button.classList.remove("is-holding");
+    pulse();
     tween(0, DRAIN_MS * p, easeOut); // not enough breath: let it out
   }
 

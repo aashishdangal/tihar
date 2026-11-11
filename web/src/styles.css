@@ -18,6 +18,8 @@
   --white-hot: #fffdf6;
   --shade: rgba(0, 0, 0, 0.6);
   --text-shade: 0 1px 14px var(--shade);
+  --boy-fill: #f2dcc0; /* the boy's cream (from the owner's mockup) */
+  --boy-ink: #3a2414;  /* his line work */
 
   /* motion: enter slow, exit fast; one easing family */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -94,11 +96,11 @@ body {
   margin-top: clamp(24px, 5vh, 56px);
 }
 
-/* ---- "your breath": the सुरु control (a figure that breathes in, then blows) ---- */
+/* ---- "your breath": the सुरु control (the boy's face breathes in, then blows) ---- */
 
 .breath {
   --p: 0; /* breath drawn in, 0..1 (breath.js) */
-  --size: clamp(112px, 8.5vw, 150px);
+  --size: clamp(116px, 9vw, 160px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -145,23 +147,23 @@ body {
   animation: none;
 }
 
-.breath__ring,
-.man {
+.breath__boy,
+.breath__ring {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
 .breath__ring {
   transform: rotate(-90deg);
+  overflow: visible;
 }
 
 .breath__track,
 .breath__fill {
   fill: none;
-  stroke-width: 1.6; /* viewBox units: ~1.8 px at the default size */
+  stroke-width: 1.6; /* viewBox units: ~1.9 px at the default size */
 }
 
 .breath__track {
@@ -187,107 +189,62 @@ body {
   to { filter: drop-shadow(0 0 12px var(--marigold)); }
 }
 
-/* the figure: cream line art, round strokes; the dhaka topi carries the one accent colour */
-.man path,
-.man ellipse {
-  fill: none;
-  stroke: var(--cream);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/* the face */
+.boy {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-.man .man__topi {
-  fill: url(#dhaka);
-  stroke-width: 2.4;
-}
+.boy__body { fill: var(--boy-fill); }
+.boy__lines { fill: var(--boy-ink); }
+.boy__accent { fill: var(--marigold); }
 
-.man pattern path {
-  fill: none;
-  stroke: var(--marigold);
-  stroke-width: 0.9;
-}
-
-.man .man__topi-band,
-.man .man__collar {
-  stroke-width: 1.8;
-}
-
-.man .man__moustache {
-  stroke-width: 2.2;
-}
-
-.man {
-  filter: drop-shadow(0 0 3px var(--shade));
-}
-
-/* breathing in: shoulders rise, head tilts back a little */
-.man__body {
-  transform: translateY(calc(var(--p) * -3px));
-  transition: transform 160ms var(--ease-out);
-}
-
-.man__head {
+/* changing faces: the old face fades, blurs and sinks back; the new one springs in, turning a
+   little the way the pose goes (back for the breath in, forward for the blow) */
+.boy__pose {
+  --turn: 0deg;
+  opacity: 0;
+  filter: blur(2px);
   transform-box: view-box;
-  transform-origin: 60px 86px;
-  transform: translateY(calc(var(--p) * -3px)) rotate(calc(var(--p) * 7deg));
-  transition: transform 160ms var(--ease-out);
-  animation: idle-head 3.6s ease-in-out infinite;
+  transform-origin: 75px 92px;
+  transform: scale(0.9) rotate(calc(var(--turn) * -0.6));
+  transition:
+    opacity 240ms var(--ease-out),
+    filter 240ms var(--ease-out),
+    transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes idle-head {
-  50% { translate: 0 -1px; }
-}
+.boy__pose--inhale { --turn: -6deg; }
+.boy__pose--hold { --turn: 3deg; }
+.boy__pose--blow { --turn: 8deg; }
 
-/* air drawn in through the nose while holding */
-.man__inhale path {
-  stroke-width: 1.6;
-  stroke-dasharray: 4 20;
-  opacity: 0;
-}
-
-.breath.is-holding:not(.is-full) .man__inhale path {
-  opacity: calc(0.25 + var(--p) * 0.6);
-  animation: inhale 0.7s linear infinite;
-}
-.breath.is-holding .man__inhale path:nth-child(2) { animation-delay: -0.23s; }
-.breath.is-holding .man__inhale path:nth-child(3) { animation-delay: -0.46s; }
-
-@keyframes inhale {
-  from { stroke-dashoffset: 24; }
-  to { stroke-dashoffset: 0; }
-}
-
-/* cheeks fill near the end of the breath */
-.man__cheek {
-  transform-box: fill-box;
-  transform-origin: right center;
-  opacity: clamp(0, calc((var(--p) - 0.55) * 3), 1);
-  transform: scaleX(clamp(0.3, calc(var(--p) * 1.2), 1));
-}
-
-/* lips: closed until the blow, then pursed into a small "o" */
-.man__mouth {
-  opacity: 0;
-}
-
-.breath.is-blowing .man__lips {
-  opacity: 0;
-}
-.breath.is-blowing .man__mouth {
+.breath:not(.is-holding):not(.is-blowing) .boy__pose--idle,
+.breath.is-holding:not(.is-cheeks) .boy__pose--inhale,
+.breath.is-holding.is-cheeks .boy__pose--hold,
+.breath.is-blowing .boy__pose--blow {
   opacity: 1;
+  filter: none;
+  transform: scale(calc(1 + var(--p) * 0.04)) rotate(0deg);
 }
-.breath.is-blowing .man__cheek {
-  opacity: 0;
-  transition: opacity 260ms var(--ease-out);
+
+/* idle: the calm face breathes slowly */
+.breath:not(.is-holding):not(.is-blowing) .boy__pose--idle {
+  animation: idle-face 3.6s ease-in-out 400ms infinite;
 }
-.breath.is-blowing .man__head {
-  animation: none;
-  transform: rotate(-6deg) translateX(-2px);
-  transition: transform 140ms var(--ease-out);
+
+@keyframes idle-face {
+  50% { translate: 0 -1.2px; }
 }
-.breath.is-blowing .man__body {
-  transform: translateY(1px);
+
+/* a soft pulse of the ring each time the face changes (breath.js toggles .is-change) */
+.breath.is-change .breath__track {
+  animation: ring-pulse 420ms var(--ease-out);
+}
+
+@keyframes ring-pulse {
+  40% { stroke: var(--cream); stroke-width: 2.6; }
 }
 
 .breath__label {
@@ -296,6 +253,7 @@ body {
   color: var(--cream);
   text-shadow: 0 0 calc(var(--p) * 26px) var(--marigold-glow-strong), var(--text-shade);
 }
+
 
 .breath:hover .breath__track,
 .breath:focus-visible .breath__track {
@@ -308,7 +266,7 @@ body {
 
 .breath__hint {
   margin: 6px 0 0;
-  width: var(--size);
+  width: auto;
   text-align: center;
   font: 600 14px / 1.5 var(--font);
   color: var(--muted);
@@ -433,6 +391,9 @@ body {
   .breath__hint {
     width: auto;
   }
+  .breath {
+    --size: clamp(104px, 28vw, 140px);
+  }
   .gate__title {
     font-size: clamp(80px, 25vw, 150px);
   }
@@ -486,8 +447,13 @@ body.is-entered #stage {
   }
   .breath__glow,
   .breath.is-full .breath__fill,
-  .man__head,
-  .breath.is-holding .man__inhale path {
-    animation: none;
+  .boy__pose,
+  .breath.is-change .breath__track {
+    animation: none !important;
+  }
+  .boy__pose {
+    transition: opacity 120ms linear !important;
+    filter: none !important;
+    transform: none !important;
   }
 }
