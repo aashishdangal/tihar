@@ -1,7 +1,7 @@
 """PNG -> WebP for one scene (see PIPELINE.md section 3).
 
-renders/<scene>/0001.png -> web/public/frames/<scene>/d/0001.webp  (1920x1080, q72)
-                         -> web/public/frames/<scene>/m/0001.webp  (720x1280,  q68)
+renders/<scene>/0001.png -> web/public/frames/<scene>/d/0001.webp  (1920x1080, q100)
+                         -> web/public/frames/<scene>/m/0001.webp  (720x1280,  q95)
 
 Mobile framing comes from scripts/mobile_framing.json (per scene); default is the spec's
 centre crop to 9:16. Mode "fit" is for shots whose subject is off-centre (s00: diyo on the
@@ -21,6 +21,9 @@ out = root / "web" / "public" / "frames" / scene
 framing = json.loads((root / "scripts" / "mobile_framing.json").read_text(encoding="utf-8"))
 cfg = framing.get(scene, {"mode": "centre"})
 MW, MH, FEATHER = 720, 1280, 48
+# q72/q68 (old spec) left visible blocks in dark gradients. Lossy q100 is ~84 KB/frame; lossless
+# is ~850 KB/frame (too heavy for ~1,800 frames), so q100 is the practical ceiling.
+Q_D, Q_M = 100, 95
 
 
 def mobile_centre(im):
@@ -72,9 +75,9 @@ dt = mt = 0
 for p in frames:
     im = Image.open(p).convert("RGB")
     d = out / "d" / f"{p.stem}.webp"
-    im.save(d, "WEBP", quality=72, method=6)
+    im.save(d, "WEBP", quality=Q_D, method=6)
     m = out / "m" / f"{p.stem}.webp"
-    mobile(im).save(m, "WEBP", quality=68, method=6)
+    mobile(im).save(m, "WEBP", quality=Q_M, method=6)
     dt += d.stat().st_size
     mt += m.stat().st_size
 n = len(frames)
