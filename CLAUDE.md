@@ -81,9 +81,8 @@ The agent never edits the .blend or runs Blender itself.
 - Blender 4.x + Cycles (GPU: AMD RX 9070 XT, 16 GB VRAM, HIP backend)
 - Blender MCP (`uvx blender-mcp`)
 - Web: Vite + vanilla JS, GSAP ScrollTrigger, `<canvas>` image-sequence scrubbing
-- Fonts: Mukta (Google Fonts, Unicode) for all UI text. AMS Gourav Bold is a
-  legacy non-Unicode font: use it only for big titles converted to SVG paths,
-  never for live text.
+- Fonts: Mukta (Google Fonts, Unicode) for all text, titles included.
+  AMS Gourav Bold was tried for the title and dropped (2026-11-11).
 - ffmpeg + cwebp for frame encoding
 
 ## Repo layout
@@ -125,6 +124,4 @@ blender.exe <file.blend> --python scripts/blender_start_mcp.py   # open Blender 
 ## Open items
 
 - Submission deadline: unknown — ask the user.
-- AMS Gourav Bold: licence is "All rights reserved" (no free licence found). The user chose to
-  use it for the big title only, as SVG paths (2026-11-11); see CREDITS.md. Never commit the .ttf.
 - Captions need a native-speaker proofread before launch.

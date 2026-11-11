@@ -9,7 +9,6 @@ site's श्रेय (credits) page; this file is the source for that page.
 | Clay Plaster texture | s00 (unused now) | Amal Kumar / Poly Haven | https://polyhaven.com/a/clay_plaster | CC0 | Tinted terracotta |
 | Carrion Crow (cornacchie-nere) | s02, s03 | 3dsky (author TBC) | TBC — 3dsky.org | Free (3dsky terms) — TBC | — |
 | Mukta (font) | all UI text | Ek Type | https://fonts.google.com/specimen/Mukta | SIL Open Font License 1.1 | — (loaded from Google Fonts) |
-| AMS Gourav Bold (font) | s00 title तिहार | ArtoMania Studio Pvt. Ltd. (designer Manoj Jaiswal; indiafont.in) | downloaded from anepali.com | "All rights reserved"; site gives no licence, allows personal use. Used by the owner's decision for this non-commercial school entry (2026-11-11). Not explicitly free (CLAUDE.md rule 4 exception). | Only the outlines of "तिहार" converted to one SVG path (`scripts/title_svg.py`); the font file is not shipped or committed |
 
 ## Self-made / self-recorded
 
