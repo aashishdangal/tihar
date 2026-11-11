@@ -194,31 +194,21 @@ body {
   display: inline-block;
 }
 
-.gate.is-blown .gate__ch {
-  animation: blow-away 900ms var(--ease-in) forwards;
-  animation-delay: calc(120ms + var(--i) * 90ms);
-}
-
+/* the wind itself is driven frame by frame from gate.js (same clock as the rendered blow-out);
+   here we only stop the idle flicker and hover transitions so they don't fight it */
 .gate.is-blown .enter__flame {
-  animation: snuff 320ms var(--ease-in) forwards;
+  animation: none;
 }
-
+.gate.is-blown .enter__label,
+.gate.is-blown .enter__wick,
+.gate.is-blown .enter__run,
+.gate.is-blown .enter__burn {
+  transition: none;
+}
+.gate.is-blown .gate__ch,
 .gate.is-blown .enter__label,
 .gate.is-blown .enter__wick {
-  animation: blow-away 700ms var(--ease-in) 60ms forwards;
-}
-
-@keyframes blow-away {
-  to {
-    transform: translate(140px, -12px) skewX(-10deg);
-    opacity: 0;
-    filter: blur(8px);
-  }
-}
-
-@keyframes snuff {
-  40% { transform: rotate(60deg) scale(1.2, 0.7); opacity: 0.9; }
-  100% { transform: rotate(80deg) scale(0.1, 0.1); opacity: 0; }
+  will-change: transform, opacity, filter;
 }
 
 .enter:focus-visible {
@@ -381,11 +371,7 @@ body.is-entered #stage {
   .sound {
     transition: none;
   }
-  .enter__flame,
-  .gate.is-blown .gate__ch,
-  .gate.is-blown .enter__flame,
-  .gate.is-blown .enter__label,
-  .gate.is-blown .enter__wick {
+  .enter__flame {
     animation: none;
   }
 }

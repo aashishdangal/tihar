@@ -14,6 +14,8 @@ const pickSet = () => (window.innerWidth / window.innerHeight <= 1 ? "m" : "d");
 const CROSSFADE_MS = 150; // loop frame -> blow-out frame 1 (both open on the same flame pose)
 const DECODE_BUDGET = 2; // WEB.md: never decode more than 2 frames per animation frame
 const BLOW_WAIT_MS = 2000; // if the blow-out isn't loaded by then, fall back to a fade
+const DEBUG = new URLSearchParams(location.search).has("debug"); // ?debug: log blow-out ticks
+if (DEBUG) window.__blowLog = [];
 
 let set = null;
 let loop = null; // FrameSequence, s00_enter (96-frame loop)
@@ -23,6 +25,7 @@ let lastLoopBmp = null;
 let blowT0 = 0;
 let blowDone = null; // resolves when the blow-out has played
 let blowAsked = 0;
+let onBlowFrame = null; // page-side wind (gate.js), driven by the blow-out clock
 const t0 = performance.now();
 
 function useSet(next) {
@@ -78,7 +81,7 @@ function tick(now) {
           phase = "done";
           loop.close();
           blow.close();
-          blowDone();
+          blowDone(false);
           return;
         }
       } else if (lastLoopBmp) stage.draw(lastLoopBmp, s0.focus[set]);
@@ -91,12 +94,14 @@ function tick(now) {
       const xf = Math.min(1, t / CROSSFADE_MS);
       if (xf < 1 && lastLoopBmp) stage.draw(lastLoopBmp, s0.focus[set]);
       if (bmp) stage.draw(bmp, sb.focus[set], xf);
+      onBlowFrame?.((t / 1000) * sb.fps);
+      if (DEBUG) window.__blowLog.push([Math.round(now - blowAsked), +((t / 1000) * sb.fps).toFixed(2), j, !!bmp]);
       blow.evict(j);
       if (t > (sb.frames / sb.fps) * 1000 + 120) {
         phase = "done";
         loop.close();
         blow.close();
-        blowDone();
+        blowDone(true);
         return;
       }
     }
@@ -104,10 +109,13 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-/** Play the blow-out from wherever the loop is; resolves on the last (black) frame. */
-function playBlowout() {
-  if (phase !== "loop") return Promise.resolve();
+/** Play the blow-out from wherever the loop is. onFrame(k) gets the current (fractional)
+ *  blow-out frame every tick, so page animations share its clock. Resolves true on the last
+ *  (black) frame, or false if the frames were late and it fell back to a fade. */
+function playBlowout(onFrame) {
+  if (phase !== "loop") return Promise.resolve(false);
   phase = "blow";
+  onBlowFrame = onFrame;
   blowAsked = performance.now();
   return new Promise((resolve) => (blowDone = resolve));
 }
