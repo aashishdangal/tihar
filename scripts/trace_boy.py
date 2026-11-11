@@ -27,20 +27,33 @@ HEADS = "--heads" in sys.argv
 if HEADS:
     # --heads: topi to chin of each pose, with its own breath marks (inhale lines, cheek marks,
     # the puff), centred in a square viewBox and clipped to a circle for the round सुरु control
-    POSES = [("idle", (918, 446, 1045, 551)), ("inhale", (1084, 414, 1240, 523)),
-             ("blow", (1350, 452, 1496, 562)), ("hold", (1552, 450, 1706, 566))]
+    # crops run down past the chin to the collar/hands so the circle, not the crop, frames him
+    POSES = [("idle", (912, 446, 1052, 600)), ("inhale", (1080, 414, 1240, 545)),
+             ("blow", (1340, 452, 1500, 600)), ("hold", (1548, 450, 1712, 605))]
     W = H = 150
-    CENTRE = (75, 79)                    # head centre in the circle
+    TOPI_TOP = 14                        # every face: top of the topi at this y ...
+    FACE_X = 75                          # ... and the head (top 95 px) centred on this x
     CLIP_R = 69                          # just inside the ring
+    UP = 6                               # finer trace for the small heads
 
+TURD, ALPHA, OPTTOL, BLUR = (40, 1.15, 0.4, 1.8) if HEADS else (6, 1.0, 0.25, 1.2)
 im = Image.open(src).convert("RGB")
+
+
+def drop_small(mask, min_px):
+    """remove connected specks smaller than min_px (in traced pixels)"""
+    lab, n = ndi.label(mask)
+    if not n:
+        return mask
+    sizes = ndi.sum(mask, lab, range(1, n + 1))
+    return np.isin(lab, [i + 1 for i, v in enumerate(sizes) if v >= min_px])
 
 
 def trace(mask, scale, dx, dy):
     """potrace a boolean mask -> SVG path data, mapped back to viewBox units."""
     bm = potrace.Bitmap(~mask)   # potracer traces the "dark" (False) pixels, so invert
-    plist = bm.trace(turdsize=6, turnpolicy=potrace.POTRACE_TURNPOLICY_MINORITY,
-                     alphamax=1.0, opticurve=True, opttolerance=0.25)
+    plist = bm.trace(turdsize=TURD, turnpolicy=potrace.POTRACE_TURNPOLICY_MINORITY,
+                     alphamax=ALPHA, opticurve=True, opttolerance=OPTTOL)
     f = lambda p: f"{p.x / scale + dx:.2f} {p.y / scale + dy:.2f}"
     parts = []
     for curve in plist:
@@ -57,7 +70,7 @@ def trace(mask, scale, dx, dy):
 groups = []
 for name, (x0, y0, x1, y1) in POSES:
     crop = im.crop((x0, y0, x1, y1))
-    big = crop.resize((crop.width * UP, crop.height * UP), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1.2))
+    big = crop.resize((crop.width * UP, crop.height * UP), Image.LANCZOS).filter(ImageFilter.GaussianBlur(BLUR))
     a = np.asarray(big).astype(float)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     lum = 0.299 * r + 0.587 * g + 0.114 * b
@@ -73,11 +86,16 @@ for name, (x0, y0, x1, y1) in POSES:
         body &= keep
     lines = body & ~cream & ~accent
     lines = ndi.binary_opening(lines, iterations=1)
+    if HEADS:
+        lines = drop_small(ndi.binary_closing(lines, iterations=2), 3 * UP * UP)
+        accent = drop_small(accent, 6 * UP * UP)
     ys, xs = np.nonzero(body)
     if HEADS:
-        # align: centre of the head (topi + face) -> CENTRE
-        dx = CENTRE[0] - (xs.min() + xs.max()) / 2 / UP
-        dy = CENTRE[1] - (ys.min() + ys.max()) / 2 / UP
+        # align: top of the topi -> TOPI_TOP; centre of the head (top 95 px) -> FACE_X
+        top = ys.min()
+        head = xs[ys < top + 95 * UP]
+        dx = FACE_X - (head.min() + head.max()) / 2 / UP
+        dy = TOPI_TOP - top / UP
     else:
         # accents outside the body too (the puff), but not the ground strip at the very bottom
         accent[-int(10 * UP):, :] = False
