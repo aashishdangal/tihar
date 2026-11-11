@@ -1,4 +1,5 @@
 :root {
+  --void: #000;
   --night: #0e1430;
   --marigold: #f2a33a; /* the only accent */
   --cream: #fff4e0;
@@ -7,6 +8,23 @@
   --makhamali: #7b2d6e;
   --caption-bg: rgba(8, 10, 24, 0.62);
   --font: "Mukta", system-ui, sans-serif;
+
+  /* derived tokens (no raw colours inside components) */
+  --marigold-hover: #f7b95c;
+  --marigold-glow: rgba(242, 163, 58, 0.25);
+  --marigold-glow-strong: rgba(242, 163, 58, 0.42);
+  --marigold-fade: rgba(242, 163, 58, 0);
+  --cream-line: rgba(255, 244, 224, 0.4);
+  --white-hot: #fffdf6;
+  --shade: rgba(0, 0, 0, 0.6);
+  --text-shade: 0 1px 14px var(--shade);
+
+  /* motion: enter slow, exit fast; one easing family */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 120ms;
+  --dur-hover: 200ms;
+  --dur-exit: 350ms;
+  --dur-enter: 1000ms;
 }
 
 /* Never set letter-spacing on Devanagari (CLAUDE.md rule 2). */
@@ -21,7 +39,7 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: #000;
+  background: var(--void);
   color: var(--cream);
   font-family: var(--font);
 }
@@ -34,7 +52,7 @@ body {
   position: fixed;
   inset: 0;
   display: block;
-  background: #000;
+  background: var(--void);
 }
 
 :focus-visible {
@@ -70,7 +88,7 @@ body {
   height: clamp(96px, 12vw, 220px);
   width: auto;
   overflow: visible;
-  filter: drop-shadow(0 2px 18px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 2px 18px var(--shade));
 }
 
 .visually-hidden {
@@ -91,32 +109,55 @@ body {
   font-size: clamp(20px, 1.9vw, 32px);
   line-height: 1.5;
   color: var(--muted);
+  text-shadow: var(--text-shade);
 }
 
 .gate__actions {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   margin-top: clamp(24px, 5vh, 56px);
+}
+
+.btn,
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .btn {
   min-height: 48px;
-  padding: 10px 30px 12px;
+  padding: 10px 28px 12px 24px;
   border: 0;
   border-radius: 999px;
   background: var(--marigold);
   color: var(--night);
   font: 700 clamp(18px, 1.35vw, 22px) / 1.3 var(--font);
-  cursor: pointer;
-  box-shadow: 0 0 32px rgba(242, 163, 58, 0.25);
-  transition: background-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 32px var(--marigold-glow);
+  transition:
+    background-color var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
 }
 
 .btn:hover {
-  background: #f7b95c;
-  box-shadow: 0 0 44px rgba(242, 163, 58, 0.4);
+  background: var(--marigold-hover);
+  box-shadow: 0 0 44px var(--marigold-glow-strong);
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .link {
@@ -126,27 +167,53 @@ body {
   background: none;
   color: var(--cream);
   font: 600 17px / 1.4 var(--font);
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 244, 224, 0.4);
-  text-underline-offset: 0.35em;
-  cursor: pointer;
+  text-shadow: var(--text-shade);
+  transition: opacity var(--dur-press) var(--ease-out);
 }
 
-.link:hover {
+.link__text {
+  text-decoration: underline;
+  text-decoration-color: var(--cream-line);
+  text-underline-offset: 0.35em;
+  transition: text-decoration-color var(--dur-hover) var(--ease-out);
+}
+
+.link:hover .link__text {
   text-decoration-color: var(--cream);
 }
 
-/* gate text fades in once the first frame has painted (only when JS runs) */
-.js .gate {
+.link:active {
+  opacity: 0.75;
+}
+
+/* entrance, once the first frame has painted (only when JS runs):
+   title, then subtitle, then the choices, so the eye reads them in order */
+.js .gate__title,
+.js .gate__sub,
+.js .gate__actions {
   opacity: 0;
-  transition: opacity 1.2s ease 0.2s;
+  transform: translateY(10px);
+  transition:
+    opacity var(--dur-enter) var(--ease-out),
+    transform var(--dur-enter) var(--ease-out);
 }
-.js body.is-ready .gate {
+.js .gate__sub {
+  transition-delay: 0.25s;
+}
+.js .gate__actions {
+  transition-delay: 0.5s;
+}
+.js body.is-ready .gate__title,
+.js body.is-ready .gate__sub,
+.js body.is-ready .gate__actions {
   opacity: 1;
+  transform: none;
 }
+
+/* exit is faster than the entrance */
 .gate.is-leaving {
-  opacity: 0 !important;
-  transition: opacity 0.35s ease;
+  opacity: 0;
+  transition: opacity var(--dur-exit) var(--ease-out);
 }
 
 /* portrait: mobile frames put the diyo mid-screen; title above, buttons below */
@@ -202,10 +269,10 @@ body {
   opacity: 0;
   background: radial-gradient(
     circle closest-side,
-    #fffdf6 0%,
+    var(--white-hot) 0%,
     var(--cream) 35%,
-    rgba(242, 163, 58, 0.5) 62%,
-    rgba(242, 163, 58, 0) 100%
+    var(--marigold-glow-strong) 62%,
+    var(--marigold-fade) 100%
   );
   will-change: transform, opacity;
 }
@@ -245,12 +312,18 @@ body.is-entered #stage {
 .story__soon {
   font-weight: 600;
   font-size: 22px;
-  color: rgba(14, 20, 48, 0.55);
+  color: var(--night);
+  opacity: 0.55;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .js .gate,
-  .gate.is-leaving {
+  .js .gate__title,
+  .js .gate__sub,
+  .js .gate__actions,
+  .gate.is-leaving,
+  .btn,
+  .link {
     transition: none;
+    transform: none;
   }
 }
