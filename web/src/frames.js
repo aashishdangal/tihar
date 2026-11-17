@@ -71,11 +71,12 @@ export class FrameSequence {
     return best;
   }
 
-  /** Free decoded frames furthest from i (for loops: furthest ahead = just played). */
-  evict(i, loop = false) {
-    if (this.bitmaps.size <= this.maxDecoded) return;
+  /** Free decoded frames furthest from i (for loops: furthest ahead = just played), keeping
+   *  `keep` of them (default maxDecoded; fewer for a scene out of view). */
+  evict(i, loop = false, keep = this.maxDecoded) {
+    if (this.bitmaps.size <= keep) return;
     const order = [...this.bitmaps.keys()].sort((a, b) => this.#dist(b, i, loop) - this.#dist(a, i, loop));
-    for (const k of order.slice(0, this.bitmaps.size - this.maxDecoded)) {
+    for (const k of order.slice(0, this.bitmaps.size - keep)) {
       this.bitmaps.get(k).close();
       this.bitmaps.delete(k);
     }

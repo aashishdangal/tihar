@@ -34,9 +34,9 @@
 | Scene | Frames | Sec/frame (test) | Est. hours | Done |
 | --- | --- | --- | --- | --- |
 | s00 | 48 loop | | | |
-| s01 | 200 | | | |
-| s02 | 220 | | | |
-| s03 | 180 | | | |
+| s01 | 186 (v032) | 78 (v027 final look, 1920×1080, 192 spp; Lazy Cloud fog off — with it on: 708–912) | ~4.3 | |
+| s02 | 200 (v083) | ~50 (1920×1080, 192 spp; kausi close-up) | 1.5 for 90–200 (rerun 2026-11-16) | ✓ v083 |
+| s03 | merged into s02 (2026-11-16) | | | |
 | s04 | 180 | | | |
 | s05 | 260 | | | |
 | s06 | 220 | | | |

@@ -4,9 +4,12 @@ import { FrameSequence } from "./frames.js";
 import { Stage } from "./stage.js";
 import { initGate } from "./gate.js";
 import { initSoundToggle } from "./sound.js";
+import { initAudio, setPlace } from "./audio.js";
+import { initStory } from "./story.js";
 
 const s0 = scenes.find((s) => s.id === "s00_enter");
 const sb = scenes.find((s) => s.id === "s00_blowout");
+const storyScenes = scenes.filter((s) => s.beats); // s01_hero, s02_legend, … in story order
 const stage = new Stage(document.getElementById("stage"));
 const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 const pickSet = () => (window.innerWidth / window.innerHeight <= 1 ? "m" : "d"); // portrait -> mobile frames
@@ -35,8 +38,8 @@ function useSet(next) {
   set = next;
   loop = new FrameSequence({ id: s0.id, count: s0.frames, set });
   blow = new FrameSequence({ id: sb.id, count: sb.frames, set, maxDecoded: 16 });
-  // the loop first; the blow-out downloads behind it (mostly dark frames, small)
-  loop.load().then(() => blow.load());
+  // the loop first; then the blow-out (mostly dark frames, small); then the story scenes
+  loop.load().then(() => blow.load()).then(() => story.preload());
 }
 
 function markReady() {
@@ -66,6 +69,7 @@ function tick(now) {
       markReady();
     }
     loop.evict(i, true);
+    setPlace(s0.id, i + 1);
   } else {
     // blow-out: starts once its first frame is decoded, then plays in real time
     if (!blowT0) {
@@ -95,6 +99,7 @@ function tick(now) {
       if (xf < 1 && lastLoopBmp) stage.draw(lastLoopBmp, s0.focus[set]);
       if (bmp) stage.draw(bmp, sb.focus[set], xf);
       onBlowFrame?.((t / 1000) * sb.fps);
+      setPlace(sb.id, (t / 1000) * sb.fps + 1);
       if (DEBUG) window.__blowLog.push([Math.round(now - blowAsked), +((t / 1000) * sb.fps).toFixed(2), j, !!bmp]);
       blow.evict(j);
       if (t > (sb.frames / sb.fps) * 1000 + 120) {
@@ -120,6 +125,7 @@ function playBlowout(onFrame) {
   return new Promise((resolve) => (blowDone = resolve));
 }
 
+const story = initStory({ stage, scenes: storyScenes, pickSet, reduceMotion: () => reduce.matches });
 useSet(pickSet());
 requestAnimationFrame(tick);
 setTimeout(markReady, 1500); // show the gate text even if frames are slow
@@ -130,6 +136,7 @@ window.addEventListener("resize", () => {
 });
 
 initSoundToggle();
+initAudio();
 
 initGate({
   reduceMotion: () => reduce.matches,
@@ -140,5 +147,6 @@ initGate({
       loop.close();
       blow.close();
     }
+    story.start();
   },
 });

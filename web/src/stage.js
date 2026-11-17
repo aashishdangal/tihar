@@ -25,6 +25,8 @@ export class Stage {
   /** focus: [x, y] in 0..1 of the image, kept as close to the screen centre as cover allows.
    *  alpha < 1 draws over the previous frame (crossfades). */
   draw(bmp, focus = [0.5, 0.5], alpha = 1) {
+    // a bitmap already released by eviction (width 0) would throw and stop the page's loop
+    if (!bmp || !bmp.width) return;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
     const s = Math.max(cw / bmp.width, ch / bmp.height);

@@ -415,20 +415,26 @@ body {
   }
 }
 
-/* ---------- after the cut: black (Scene 1 rises out of it) ---------- */
+/* ---------- after the cut: the story scrolls (Scene 1 rises out of black) ---------- */
 
-body.is-entered #stage {
+/* the window scrolls (ScrollTrigger reads window scroll); the canvas stays fixed behind */
+body.is-entered {
+  overflow: visible;
+  height: auto;
+  overscroll-behavior-y: none;
+}
+
+/* no browser scrollbar over the film; the diyos and captions show where you are */
+html:has(body.is-entered) {
+  scrollbar-width: none;
+}
+html:has(body.is-entered)::-webkit-scrollbar {
   display: none;
 }
 
-/* ---------- placeholder until Scene 1 exists ---------- */
-
 .story {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--cream);
+  position: relative;
+  z-index: 1;
   outline: none;
 }
 
@@ -436,10 +442,203 @@ body.is-entered #stage {
   display: none;
 }
 
+/* a scene's section is only scroll length; its height is set from scenes.json */
+.scene {
+  pointer-events: none;
+}
+
+/* placeholder until Scene 3 exists: rises after Scene 2's last frame */
+.story__next {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--void);
+}
+
 .story__soon {
+  margin: 0;
   font-weight: 600;
   font-size: 22px;
   color: var(--muted);
+}
+
+/* ---------- HUD (after entering) ---------- */
+
+.wordmark,
+.diyos,
+.caption,
+.scroll-cue {
+  position: fixed;
+  z-index: 3;
+  margin: 0;
+  pointer-events: none;
+}
+
+.wordmark {
+  top: max(20px, env(safe-area-inset-top));
+  left: max(24px, env(safe-area-inset-left));
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--cream);
+  text-shadow: var(--text-shade);
+}
+
+.diyos {
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.diyo svg {
+  display: block;
+  width: 26px;
+  height: 23px;
+}
+
+.diyo__bowl {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+
+.diyo__flame {
+  fill: var(--marigold);
+  opacity: 0;
+}
+
+.diyo.is-lit .diyo__bowl,
+.diyo.is-active .diyo__bowl {
+  stroke: var(--marigold);
+  opacity: 1;
+}
+
+.diyo.is-lit .diyo__flame {
+  opacity: 1;
+}
+
+.diyo.is-active .diyo__flame {
+  transform-origin: 16px 12px;
+  animation: diyo-flicker 1.4s ease-in-out infinite;
+}
+
+@keyframes diyo-flicker {
+  0%, 100% { opacity: 0.95; transform: scale(1, 1); }
+  40% { opacity: 0.7; transform: scale(0.92, 1.06); }
+  70% { opacity: 1; transform: scale(1.04, 0.95); }
+}
+
+.js .wordmark,
+.js .diyos {
+  opacity: 0;
+  transition: opacity var(--dur-enter) var(--ease-out) 1.2s;
+}
+body.is-entered .wordmark,
+body.is-entered .diyos {
+  opacity: 1;
+}
+
+/* caption: gold label + max two short lines, no box (text shadow only); fade in 400 ms, out 300 ms */
+.caption {
+  left: 50%;
+  bottom: max(9vh, calc(env(safe-area-inset-bottom) + 72px));
+  width: min(600px, calc(100vw - 32px));
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 300ms var(--ease-in),
+    transform 300ms var(--ease-in);
+}
+
+.caption.is-shown {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition:
+    opacity 400ms var(--ease-out),
+    transform 400ms var(--ease-out);
+}
+
+.caption__label {
+  margin: 0 0 4px;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--marigold);
+}
+
+.caption__text {
+  margin: 0;
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.45;
+  color: var(--cream);
+  text-wrap: balance;
+}
+
+/* scroll cue on the black after entering, until the first scroll */
+.scroll-cue {
+  left: 50%;
+  bottom: max(6vh, calc(env(safe-area-inset-bottom) + 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 300ms var(--ease-in);
+}
+
+.scroll-cue.is-shown {
+  opacity: 1;
+  transition: opacity var(--dur-enter) var(--ease-out);
+}
+
+.scroll-cue__line {
+  position: relative;
+  width: 1px;
+  height: 44px;
+  overflow: hidden;
+  background: var(--cream-line);
+}
+
+.scroll-cue__line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -40%;
+  width: 1px;
+  height: 40%;
+  background: var(--marigold);
+  animation: cue-drop 1.8s ease-in-out infinite;
+}
+
+@keyframes cue-drop {
+  to { top: 100%; }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .wordmark {
+    left: max(16px, env(safe-area-inset-left));
+  }
+  .diyos {
+    right: max(16px, env(safe-area-inset-right));
+    gap: 6px;
+  }
+  .caption {
+    bottom: max(14vh, calc(env(safe-area-inset-bottom) + 84px));
+  }
+  .caption__text {
+    font-size: 20px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -448,8 +647,14 @@ body.is-entered #stage {
   .gate.is-leaving,
   .breath__track,
   .breath__hint,
-  .sound {
+  .sound,
+  .wordmark,
+  .diyos {
     transition: none;
+  }
+  .scroll-cue__line::after,
+  .diyo.is-active .diyo__flame {
+    animation: none;
   }
   .breath__glow,
   .breath.is-full .breath__fill,

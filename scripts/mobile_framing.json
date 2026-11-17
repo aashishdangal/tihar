@@ -1,5 +1,5 @@
 {
-  "_doc": "Per-scene mobile (portrait) framing for encode_frames.py. Default: centre crop to 9:16. 'fit': crop columns x0..x1 at full height, place at center_y, fill above/below. 'points' are frame positions (0..1) whose mobile position the encoder prints, e.g. for web glow origins.",
+  "_doc": "Per-scene mobile (portrait) framing for encode_frames.py. Default: centre crop to 9:16. 'fit': crop columns x0..x1 at full height, place at center_y, fill above/below. 'points' are frame positions (0..1) whose mobile position the encoder prints, e.g. for web glow origins. Optional 'q_d' / 'q_m': WebP quality for this scene, a number or \"lossless\" (default 100). Hosting decision 2026-11-16: lossy q100 everywhere except s01 desktop (lossless, dense city lights).",
   "s00_enter": {
     "mode": "fit",
     "x0": 0.0,
@@ -23,5 +23,22 @@
         0.32
       ]
     }
+  },
+  "s01_hero": {
+    "mode": "centre",
+    "q_d": "lossless",
+    "q_m": 100
+  },
+  "s02_legend": {
+    "mode": "centre"
+  },
+  "s04_kukur": {
+    "mode": "centre"
+  },
+  "s05_laxmi": {
+    "mode": "centre"
+  },
+  "s06_govardhan": {
+    "mode": "centre"
   }
 }

@@ -52,9 +52,40 @@
 
 
 
-    <!-- placeholder until Scene 1 exists -->
+    <!-- HUD after entering: wordmark (top-left), progress diyos (bottom-right; diyo N lights
+         during Scene N+2, so all five stay unlit in Scene 1) -->
+    <p class="wordmark" aria-hidden="true">तिहार</p>
+    <ol class="diyos" aria-label="तिहारका पाँच दिन">
+      <li class="diyo" aria-label="दिन १"><svg viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path class="diyo__flame" d="M16 2c2.6 3.4 3.4 5.8 3.4 7.6A3.4 3.4 0 0 1 16 13a3.4 3.4 0 0 1-3.4-3.4C12.6 7.8 13.4 5.4 16 2z"/><path class="diyo__bowl" d="M3 15.5h26c-.6 5.6-6.2 9.5-13 9.5S3.6 21.1 3 15.5z"/></svg></li>
+      <li class="diyo" aria-label="दिन २"><svg viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path class="diyo__flame" d="M16 2c2.6 3.4 3.4 5.8 3.4 7.6A3.4 3.4 0 0 1 16 13a3.4 3.4 0 0 1-3.4-3.4C12.6 7.8 13.4 5.4 16 2z"/><path class="diyo__bowl" d="M3 15.5h26c-.6 5.6-6.2 9.5-13 9.5S3.6 21.1 3 15.5z"/></svg></li>
+      <li class="diyo" aria-label="दिन ३"><svg viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path class="diyo__flame" d="M16 2c2.6 3.4 3.4 5.8 3.4 7.6A3.4 3.4 0 0 1 16 13a3.4 3.4 0 0 1-3.4-3.4C12.6 7.8 13.4 5.4 16 2z"/><path class="diyo__bowl" d="M3 15.5h26c-.6 5.6-6.2 9.5-13 9.5S3.6 21.1 3 15.5z"/></svg></li>
+      <li class="diyo" aria-label="दिन ४"><svg viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path class="diyo__flame" d="M16 2c2.6 3.4 3.4 5.8 3.4 7.6A3.4 3.4 0 0 1 16 13a3.4 3.4 0 0 1-3.4-3.4C12.6 7.8 13.4 5.4 16 2z"/><path class="diyo__bowl" d="M3 15.5h26c-.6 5.6-6.2 9.5-13 9.5S3.6 21.1 3 15.5z"/></svg></li>
+      <li class="diyo" aria-label="दिन ५"><svg viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path class="diyo__flame" d="M16 2c2.6 3.4 3.4 5.8 3.4 7.6A3.4 3.4 0 0 1 16 13a3.4 3.4 0 0 1-3.4-3.4C12.6 7.8 13.4 5.4 16 2z"/><path class="diyo__bowl" d="M3 15.5h26c-.6 5.6-6.2 9.5-13 9.5S3.6 21.1 3 15.5z"/></svg></li>
+    </ol>
+
+    <!-- caption block (bottom-centre): real text, read out when it appears -->
+    <div id="caption" class="caption" aria-live="polite">
+      <p class="caption__label" data-label></p>
+      <p class="caption__text" data-text></p>
+    </div>
+
+    <!-- shown on the black after entering, until the first scroll -->
+    <p id="scroll-cue" class="scroll-cue" aria-hidden="true">
+      <span>तल स्क्रोल गर्नुहोस्</span>
+      <span class="scroll-cue__line"></span>
+    </p>
+
+    <!-- the story: each scene is a tall section whose scroll scrubs its frames on #stage -->
     <main id="story" class="story" aria-label="कथा" tabindex="-1" hidden>
-      <p class="story__soon">दृश्य १ — तयार हुँदैछ</p>
+      <section id="s01_hero" class="scene" aria-label="उज्यालोको पर्व"></section>
+      <section id="s02_legend" class="scene" aria-label="कथा"></section>
+      <section id="s04_kukur" class="scene" aria-label="दिन २ · कुकुर तिहार"></section>
+      <section id="s05_laxmi" class="scene" aria-label="दिन ३ · गाई तिहार र लक्ष्मी पूजा"></section>
+      <section id="s06_govardhan" class="scene" aria-label="दिन ४ · देउसी"></section>
+      <!-- placeholder until the next scene exists -->
+      <section class="story__next" aria-label="कथा">
+        <p class="story__soon">अर्को दृश्य — तयार हुँदैछ</p>
+      </section>
     </main>
 
     <script type="module" src="/src/main.js"></script>

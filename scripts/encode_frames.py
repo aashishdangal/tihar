@@ -19,29 +19,8 @@ import tempfile
 
 from PIL import Image
 
-# cwebp (libwebp, winget Google.Libwebp) gives -sharp_yuv: cleaner colour edges than Pillow at q100.
-CWEBP = os.environ.get("CWEBP") or shutil.which("cwebp") or next(iter(glob.glob(os.path.expandvars(
-    r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Google.Libwebp_*\libwebp-*\bin\cwebp.exe"))), None)
-
-
-def save_webp(im_or_path, dest, q):
-    """Encode to WebP: cwebp -q <q> -sharp_yuv if available, else Pillow."""
-    if CWEBP is None:
-        im = im_or_path if isinstance(im_or_path, Image.Image) else Image.open(im_or_path).convert("RGB")
-        im.save(dest, "WEBP", quality=q, method=6)
-        return
-    tmp = None
-    if isinstance(im_or_path, Image.Image):
-        fd, tmp = tempfile.mkstemp(suffix=".png")
-        os.close(fd)
-        im_or_path.save(tmp)
-        im_or_path = tmp
-    try:
-        subprocess.run([CWEBP, "-quiet", "-q", str(q), "-m", "6", "-sharp_yuv", str(im_or_path), "-o", str(dest)],
-                       check=True)
-    finally:
-        if tmp:
-            os.remove(tmp)
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from webp_util import CWEBP, save_webp  # noqa: E402
 
 
 scene = sys.argv[1]
@@ -53,7 +32,10 @@ cfg = framing.get(scene, {"mode": "centre"})
 MW, MH, FEATHER = 720, 1280, 48
 # q72/q68 (old spec) left visible blocks in dark gradients. Lossy q100 + sharp_yuv is ~93 KB/frame
 # and is the ceiling for lossy WebP; near-lossless and lossless are ~820-850 KB/frame (render grain).
-Q_D, Q_M = 100, 100
+# Optional per-scene override ("q_d" / "q_m" in mobile_framing.json, a number or "lossless").
+# s01 is lossless: its dense coloured city lights looked smeared even at lossy q100 (owner: size
+# budget doesn't matter for this scene, quality does).
+Q_D, Q_M = cfg.get("q_d", 100), cfg.get("q_m", 100)
 
 
 def mobile_centre(im):
@@ -112,6 +94,7 @@ for p in frames:
     mt += m.stat().st_size
 n = len(frames)
 print(f"encoder: {CWEBP or 'Pillow'}")
+subprocess.run([sys.executable, str(root / "scripts" / "make_low_set.py"), scene], check=True)
 print(f"{n} frames -> {out}  d {dt/1e6:.1f} MB ({dt/n/1e3:.0f} KB/frame)  m {mt/1e6:.1f} MB ({mt/n/1e3:.0f} KB/frame)")
 for name, (px, py) in cfg.get("points", {}).items():
     mx, my = mobile_point(px, py, 1920, 1080)
