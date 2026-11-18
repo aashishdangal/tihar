@@ -5,7 +5,8 @@
 const pad = (n) => String(n).padStart(4, "0");
 
 export class FrameSequence {
-  constructor({ id, count, set, maxDecoded = 12 }) {
+  constructor({ id, count, set, maxDecoded = 12, quiet = false }) {
+    this.quiet = quiet; // the light set may be absent for a scene: fall back, don't shout
     this.count = count;
     this.url = (i) => `${import.meta.env.BASE_URL}frames/${id}/${set}/${pad(i + 1)}.webp`;
     this.blobs = new Array(count);
@@ -37,7 +38,7 @@ export class FrameSequence {
       this.blobs[i] = await res.blob();
       this.loaded++;
     } catch (err) {
-      console.warn("frame failed", this.url(i), err);
+      if (!this.quiet) console.warn("frame failed", this.url(i), err);
     }
   }
 

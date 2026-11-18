@@ -11,53 +11,20 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FrameSequence } from "./frames.js";
+import { layout } from "./scroll_map.js";
 import { setPlace } from "./audio.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SMOOTH_S = 0.14; // scrub ease time constant (s)
+const SMOOTH_S = 0.14; // scrub ease time constant (s), once the scroll has come to rest
+const SMOOTH_MOVING_S = 0.05; // while the gesture is live: the picture stays with the finger
+const SETTLE_MS = 140; // quiet time after a gesture before the full-quality frame is drawn
 const DECODE_BUDGET = 2; // WEB.md: never decode more than 2 frames per animation frame
 const DRIFT_PERIOD_S = 9; // idle drift inside a hold
 const IDLE_KEEP = 3; // decoded frames kept by a scene that is out of view
+const SNAP_REACH = 30; // vh: a gesture ending this close to a snap frame settles onto it
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
-/** Scroll layout of one scene: piecewise-linear map between scroll and frame number.
- *  Frames intro[1]..frames at vhPerFrame; each beat's hold gets extraVh more. Lengths in vh. */
-function layout(scene) {
-  const v = scene.vhPerFrame;
-  const segs = [];
-  let f = scene.intro ? scene.intro[1] : 1;
-  for (const b of scene.beats) {
-    const [h0, h1] = b.hold;
-    if (h0 > f) segs.push({ f0: f, f1: h0, len: (h0 - f) * v });
-    segs.push({ f0: h0, f1: h1, len: (h1 - h0) * v + b.extraVh });
-    f = h1;
-  }
-  if (scene.frames > f) segs.push({ f0: f, f1: scene.frames, len: (scene.frames - f) * v });
-  const total = segs.reduce((a, s) => a + s.len, 0);
-  return {
-    totalVh: total,
-    /** progress 0..1 -> frame (fractional) */
-    frameAt(p) {
-      let d = clamp(p, 0, 1) * total;
-      for (const s of segs) {
-        if (d <= s.len) return s.f0 + (s.f1 - s.f0) * (d / s.len);
-        d -= s.len;
-      }
-      return scene.frames;
-    },
-    /** frame -> progress 0..1 */
-    progressAt(f) {
-      let d = 0;
-      for (const s of segs) {
-        if (f <= s.f1) return (d + s.len * ((f - s.f0) / (s.f1 - s.f0))) / total;
-        d += s.len;
-      }
-      return 1;
-    },
-  };
-}
 
 export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   const story = document.getElementById("story");
@@ -83,11 +50,32 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     // more, so the next block only starts rising after its final frame
     section.style.height = last ? `calc(${map.totalVh}vh + 100vh)` : `${map.totalVh}vh`;
     const p = { scene, section, map, seq: null, progress: 0, cur: 1, dir: 1, intro: null };
+    // Snap (scenes.json "snap", in frames): the scroll stays yours — frames follow the gesture
+    // 1:1 — but when the gesture ends near a composed moment (the valley settling, the end of a
+    // caption hold, the scene's last frame) it eases onto it instead of resting mid-pan.
+    // Only near: beyond SNAP_REACH the scroll is left exactly where it was put, so a long sweep
+    // is never yanked out of the viewer's hands.
+    const snapAt = (scene.snap ?? []).map((f) => map.progressAt(f));
+    const snapTo = (value) => {
+      // a caption that has just arrested the scroll owns the reader's position until it has been
+      // read; snapping back to the previous resting frame would yank the text off the screen
+      if (performance.now() < snapHeldUntil) return value;
+      const reach = SNAP_REACH / Math.max(1, map.totalVh); // vh -> progress
+      let best = value;
+      for (const s of snapAt) if (Math.abs(s - value) < Math.abs(best - value) || best === value) {
+        if (Math.abs(s - value) <= reach) best = s;
+      }
+      return best;
+    };
+
     p.st = ScrollTrigger.create({
       trigger: section,
       start: "top top",
       end: () => `+=${(map.totalVh * window.innerHeight) / 100}`,
       invalidateOnRefresh: true,
+      ...(snapAt.length && !reduceMotion()
+        ? { snap: { snapTo, duration: { min: 0.15, max: 0.5 }, delay: 0.08, ease: "power2.out" } }
+        : {}),
       onUpdate(self) {
         p.progress = self.progress;
         lastScrollT = performance.now();
@@ -98,7 +86,10 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   });
 
   // load scene by scene, in story order
+  // The light set comes down first, for every scene: it is a third of the bytes and the scrub
+  // can run on it from the start. The full set follows and is what you see once you stop.
   async function loadAll() {
+    for (const p of players) await p.lo.load();
     for (const p of players) await p.seq.load();
   }
   function useSet(next) {
@@ -107,6 +98,8 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     for (const p of players) {
       p.seq?.close();
       p.seq = new FrameSequence({ id: p.scene.id, count: p.scene.frames, set, maxDecoded: 28 });
+      // the light set is kept alongside it and is what a moving scrub draws (see pick())
+      if (!p.lo) p.lo = new FrameSequence({ id: p.scene.id, count: p.scene.frames, set: "l", maxDecoded: 40, quiet: true });
     }
     if (loading) loadAll();
   }
@@ -120,15 +113,35 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     return p;
   }
 
-  function decodeAround(p, i) {
+  // Decode around the frame the scroll is ASKING for, not the one on screen: the drawn frame
+  // lags behind the gesture, so centring here on p.cur kept decoding frames already passed.
+  // The light set goes first (it is what a moving scrub draws); the full frame of a scroll that
+  // has come to rest is decoded last, and only then does the picture sharpen.
+  function decodeAround(p, i, settled) {
     let budget = DECODE_BUDGET;
     const order = [0, 1, 2, -1, 3, 4, 5, 6, -2, 7, 8, 9, 10];
+    const seqs = settled ? [p.seq, p.lo] : [p.lo, p.seq];
     for (const k of order) {
       if (budget <= 0) break;
       const j = i - 1 + k * p.dir; // 0-based
-      if (j >= 0 && j < p.scene.frames && p.seq.decode(j)) budget--;
+      if (j < 0 || j >= p.scene.frames) continue;
+      for (const seq of seqs) {
+        if (budget <= 0) break;
+        if (seq.decode(j)) budget--;
+        if (!settled && k !== 0) break; // ahead of the gesture, only the light set is worth it
+      }
     }
     return budget;
+  }
+
+  /** The best picture available for frame k right now: the full frame once the scroll has
+   *  settled, the light one while it is moving, and the nearest of either rather than nothing. */
+  function pick(p, k, settled) {
+    const hi = p.seq.bitmaps.get(k);
+    if (settled && hi) return hi;
+    const lo = p.lo?.bitmaps.get(k);
+    if (lo) return lo;
+    return hi ?? p.lo?.nearest(k) ?? p.seq.nearest(k);
   }
 
   // Crossfade cut (scene "xfadeIn", in frames): over its first frames the scene fades in over
@@ -140,13 +153,13 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   }
 
   // one exact frame, never a blend of two (a blend shows as a soft double image)
-  function drawFrame(p, f) {
-    const bmp = p.seq.nearest(Math.round(f) - 1);
+  function drawFrame(p, f, settled = true) {
+    const bmp = pick(p, Math.round(f) - 1, settled);
     if (!bmp) return false;
     const a = xfadeAlpha(p.scene, f);
     if (a < 1) {
       const prevP = players[players.indexOf(p) - 1];
-      const under = prevP?.seq.nearest(prevP.scene.frames - 1);
+      const under = prevP && pick(prevP, prevP.scene.frames - 1, true);
       if (under) stage.draw(under, prevP.scene.focus[set]);
       else {
         stage.ctx.fillStyle = "#000";
@@ -168,33 +181,99 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
 
   const beatAt = (p, f) => p.scene.beats.find((b) => f >= b.hold[0] && f <= b.hold[1]);
 
-  // Caption: appears when the scroll reaches a beat's caption range; the next scroll (one wheel
-  // step) takes it away. Scroll during the first CAPTION_GRACE_MS doesn't count (the gesture that
-  // arrived is still moving). It comes back only after leaving the range and returning.
-  const CAPTION_GRACE_MS = 700;
-  const CAPTION_DISMISS_PX = 40;
+  // A caption must survive momentum. On a Mac trackpad one flick keeps the page moving for a
+  // second or more and covers thousands of pixels, so a caption hold of a few tens of vh used to
+  // flash past unread and the scroll carried on into the next scene. Two rules fix that:
+  //
+  //  1. ARREST. The first time a flick reaches a caption, the scroll is pinned at the caption's
+  //     own frame, which stops the momentum dead. It happens once per caption per approach, so
+  //     the next gesture carries straight on through: the reader is stopped, never trapped.
+  //  2. DWELL. Once shown, a caption stays for CAPTION_MIN_MS whatever the scroll does, and only
+  //     a deliberate scroll after that takes it away.
+  const CAPTION_MIN_MS = 1500; // a caption stays at least this long once it is up
+  const FLICK_PX = 45; // scroll in one frame that counts as momentum rather than a careful move
+  const PIN_MS = 380; // momentum keeps arriving after the first correction: hold the line
+  let snapHeldUntil = 0; // while a caption is being read, snapping stays out of the way
+
+  let lastY = 0;
+  let pinY = null;
+  let pinUntil = 0;
+  const arrested = new Map(); // beat -> true while this approach has already been stopped
+
+  /** page scroll position (px) of a frame inside scene p */
+  const scrollOf = (p, f) => p.st.start + p.map.progressAt(f) * (p.st.end - p.st.start);
+
+  /** Stop momentum at the first caption it runs into. Returns true if the scroll was pinned. */
+  function arrestAtCaption(p, now) {
+    const y = window.scrollY;
+    const vy = y - lastY;
+    lastY = y;
+    // a correction already made: keep the scroll there until the momentum has spent itself
+    if (pinY !== null) {
+      if (now < pinUntil) {
+        if (Math.abs(y - pinY) > 1) {
+          window.scrollTo(0, pinY);
+          lastY = pinY;
+        }
+        lastScrollT = now;
+        return true;
+      }
+      pinY = null;
+    }
+    if (Math.abs(vy) < FLICK_PX) return false; // a careful scroll is never interfered with
+    // Every caption on the page is a candidate, not just the scene in view: a hard flick can
+    // clear a whole scene in two frames, and the first caption it flew past is the one to stop at.
+    const prev = y - vy;
+    let hit = null;
+    for (const q of players) {
+      for (const b of q.scene.beats) {
+        if (!b.caption || arrested.get(b)) continue;
+        // half a frame inside the range: stopping exactly on its first frame can land a hair
+        // short of it, and the caption the arrest exists to show would not appear at all
+        const gate = scrollOf(q, vy > 0 ? b.caption.from + 0.5 : b.caption.to - 0.5);
+        const crossed = vy > 0 ? prev <= gate && y >= gate : prev >= gate && y <= gate;
+        if (!crossed) continue;
+        if (!hit || (vy > 0 ? gate < hit.gate : gate > hit.gate)) hit = { b, gate };
+      }
+    }
+    if (hit) {
+      arrested.set(hit.b, true);
+      snapHeldUntil = now + CAPTION_MIN_MS + 250;
+      pinY = Math.round(hit.gate);
+      pinUntil = now + PIN_MS;
+      window.scrollTo(0, pinY);
+      lastY = pinY;
+      lastScrollT = now;
+      return true;
+    }
+    // re-arm a caption once the reader has left its hold well behind
+    for (const q of players) {
+      for (const b of q.scene.beats) {
+        if (!b.caption || !arrested.get(b)) continue;
+        const lo = scrollOf(q, b.hold[0]) - window.innerHeight;
+        const hi = scrollOf(q, b.hold[1]) + window.innerHeight;
+        if (y < lo || y > hi) arrested.delete(b);
+      }
+    }
+    return false;
+  }
+
+  // Caption: up whenever the scroll is inside its frame range, and for CAPTION_MIN_MS after it
+  // leaves — so momentum carrying the page past cannot snatch the text away half-read. It is the
+  // frame range that rules, not the gesture: resting on a caption's frame always shows its text.
   let capBeat = null;
-  let capState = "armed"; // armed -> shown -> dismissed
   let capT = 0;
-  let capY = 0;
   function updateCaption(p, scrollF, now) {
     const b = p.scene.beats.find((x) => x.caption && scrollF >= x.caption.from && scrollF <= x.caption.to);
-    if (b !== capBeat) {
-      capBeat = b ?? null;
-      capState = "armed";
-    }
-    if (!b) capState = "armed";
-    else if (capState === "armed") {
-      capState = "shown";
+    if (b && b !== capBeat) {
+      capBeat = b;
       capT = now;
-      capY = window.scrollY;
       capLabel.textContent = b.caption.label;
       capText.textContent = b.caption.text;
-    } else if (capState === "shown") {
-      if (now - capT < CAPTION_GRACE_MS) capY = window.scrollY;
-      else if (Math.abs(window.scrollY - capY) > CAPTION_DISMISS_PX) capState = "dismissed";
     }
-    caption.classList.toggle("is-shown", capState === "shown");
+    const dwelling = capBeat && now - capT < CAPTION_MIN_MS;
+    if (!b && !dwelling) capBeat = null;
+    caption.classList.toggle("is-shown", !!(b || dwelling));
   }
 
   function activate(p) {
@@ -208,11 +287,13 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   function tick(now) {
     if (!running) return;
     const dt = lastT ? Math.min(0.1, (now - lastT) / 1000) : 1 / 60;
+    const prevTickT = lastT;
     lastT = now;
     activate(inView());
     const p = active;
     const { scene, map } = p;
     const scrollF = map.frameAt(p.progress);
+    const settled = now - lastScrollT > SETTLE_MS && Math.abs(scrollF - p.cur) < 0.75;
     let budget = DECODE_BUDGET;
 
     if (reduceMotion()) {
@@ -221,10 +302,10 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       reducedAlpha = clamp(reducedAlpha + Math.sign((fadeOut ? 0 : 1) - reducedAlpha) * dt * 2.5, 0, 1);
       const beat = scene.beats.reduce((a, b) => (Math.abs(b.stop - scrollF) < Math.abs(a.stop - scrollF) ? b : a));
       p.cur = beat.stop;
-      budget = decodeAround(p, p.cur);
+      budget = decodeAround(p, p.cur, true);
       stage.ctx.fillStyle = "#000";
       stage.ctx.fillRect(0, 0, stage.canvas.width, stage.canvas.height);
-      const bmp = p.seq.nearest(p.cur - 1);
+      const bmp = pick(p, p.cur - 1, true);
       if (bmp) stage.draw(bmp, scene.focus[set], reducedAlpha);
     } else {
       // target: the scroll's frame, plus a slow drift while resting in a hold
@@ -240,12 +321,12 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       if (p.intro) target = Math.min(target, p.intro.f);
 
       const prev = p.cur;
-      p.cur += (target - p.cur) * (1 - Math.exp(-dt / SMOOTH_S));
+      p.cur += (target - p.cur) * (1 - Math.exp(-dt / (settled ? SMOOTH_S : SMOOTH_MOVING_S)));
       if (Math.abs(target - p.cur) < 0.002) p.cur = target;
       if (p.cur !== prev) p.dir = p.cur > prev ? 1 : -1;
 
-      budget = decodeAround(p, Math.round(p.cur));
-      if (!drawFrame(p, p.cur)) {
+      budget = decodeAround(p, Math.round(target), settled);
+      if (!drawFrame(p, p.cur, settled)) {
         stage.ctx.fillStyle = "#000";
         stage.ctx.fillRect(0, 0, stage.canvas.width, stage.canvas.height);
       }
@@ -254,6 +335,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       if (scene.fadeOut) blackout(clamp((p.cur - (scene.frames - scene.fadeOut)) / (scene.fadeOut - 1), 0, 1));
     }
     p.seq.evict(Math.round(p.cur) - 1);
+    p.lo?.evict(Math.round(p.cur) - 1);
     setPlace(scene.id, p.cur);
 
     // neighbours: the next scene's opening frames ready near the cut, the previous scene's last
@@ -264,16 +346,34 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     for (const q of players) {
       if (q === p) continue;
       if (q === next && p.cur > scene.frames - 10) {
-        for (let j = 0; j < IDLE_KEEP && budget > 0; j++) if (q.seq.decode(j)) budget--;
+        for (let j = 0; j < IDLE_KEEP && budget > 0; j++) if (q.lo.decode(j) || q.seq.decode(j)) budget--;
         q.seq.evict(0, false, IDLE_KEEP);
+        q.lo.evict(0, false, IDLE_KEEP);
       } else if (q === prevP && p.cur < 10) {
         const end = q.scene.frames - 1;
-        for (let j = 0; j < IDLE_KEEP && budget > 0; j++) if (q.seq.decode(end - j)) budget--;
+        for (let j = 0; j < IDLE_KEEP && budget > 0; j++) if (q.lo.decode(end - j) || q.seq.decode(end - j)) budget--;
         q.seq.evict(end, false, IDLE_KEEP);
-      } else q.seq.evict(q === next ? 0 : q.scene.frames - 1, false, 0);
+        q.lo.evict(end, false, IDLE_KEEP);
+      } else {
+        q.seq.evict(q === next ? 0 : q.scene.frames - 1, false, 0);
+        q.lo?.evict(q === next ? 0 : q.scene.frames - 1, false, 0);
+      }
     }
 
+    if (!reduceMotion()) arrestAtCaption(p, now);
     updateCaption(p, scrollF, now);
+
+    // ?probe in the URL records the scrub loop so pacing problems can be measured, not guessed
+    if (window.__probe) {
+      window.__probe.push([
+        Math.round(now),
+        prevTickT ? Math.round(now - prevTickT) : 0, // ms since the last tick (frame budget)
+        +p.cur.toFixed(2), // frame actually drawn
+        +scrollF.toFixed(2), // frame the scroll is asking for
+        p.seq.bitmaps.has(Math.round(p.cur) - 1) ? 1 : 0, // 1 = exact frame, 0 = a stand-in
+        Math.round(window.scrollY),
+      ]);
+    }
     requestAnimationFrame(tick);
   }
 

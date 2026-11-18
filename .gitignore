@@ -37,3 +37,6 @@ __pycache__/
 
 # Scene .blend files are too big for GitHub; keep them local (s00_enter.blend stays as already pushed)
 blender/scenes/*.blend
+
+# Local Python venv for the frame scripts (Pillow)
+.venv/
