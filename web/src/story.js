@@ -12,6 +12,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FrameSequence } from "./frames.js";
 import { layout } from "./scroll_map.js";
+import { initCaption, initPlaceMode } from "./caption.js";
 import { setPlace } from "./audio.js";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -29,8 +30,9 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   const story = document.getElementById("story");
   const caption = document.getElementById("caption");
-  const capLabel = caption.querySelector("[data-label]");
-  const capText = caption.querySelector("[data-text]");
+  const captionLight = initCaption(caption, { reduceMotion });
+  // ?place in the URL: drag each caption where it belongs, then read the values back out
+  if (new URLSearchParams(location.search).has("place")) initPlaceMode(caption, captionLight);
   const cue = document.getElementById("scroll-cue");
   const stageEl = stage.canvas;
 
@@ -268,12 +270,22 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     if (b && b !== capBeat) {
       capBeat = b;
       capT = now;
-      capLabel.textContent = b.caption.label;
-      capText.textContent = b.caption.text;
+      // placement: the caption's own "at", else the scene's "captionAt", else bottom centre
+      captionLight.set(b.caption.label, b.caption.text, {
+        at: b.caption.at ?? p.scene.captionAt,
+        lights: !!b.caption.lights,
+        align: b.caption.align ?? p.scene.captionAlign,
+        set,
+        key: `${p.scene.id}:${b.caption.label}`,
+      });
     }
     const dwelling = capBeat && now - capT < CAPTION_MIN_MS;
     if (!b && !dwelling) capBeat = null;
-    caption.classList.toggle("is-shown", !!(b || dwelling));
+    const show = !!(b || dwelling);
+    caption.classList.toggle("is-shown", show);
+    // the lit layer belongs to the caption: it goes when the caption goes, not when the next
+    // caption happens to replace it
+    captionLight.shown(show);
   }
 
   function activate(p) {

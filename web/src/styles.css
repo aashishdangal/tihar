@@ -7,6 +7,13 @@
   --vermilion: #b3202a;
   --makhamali: #7b2d6e;
   --caption-bg: rgba(8, 10, 24, 0.62);
+  --caption-dark: #6d5c45; /* the unlit end of the caption's lighting ramp */
+
+  /* jhilimili (scene 1 only): the valley's own lights, muted - gold, blue, jade, rose */
+  --jhil-gold: #f2a33a;
+  --jhil-blue: #6fb0e0;
+  --jhil-jade: #8ccfa2;
+  --jhil-rose: #e291ad;
   --font: "Mukta", system-ui, sans-serif;
 
   /* derived tokens (no raw colours inside components) */
@@ -285,6 +292,14 @@ body {
   opacity: 0;
 }
 
+/* Each cluster of the title must be its own box, or the wind cannot move it: transforms and
+   filters are ignored on a non-replaced inline element, so gate.js was setting them into
+   nothing and तिहार stayed put while the diyo went out. No letter-spacing is added, and the
+   spans sit flush, so the shirorekha inside each cluster is unaffected (CLAUDE.md 2). */
+.gate__ch {
+  display: inline-block;
+}
+
 /* the wind on the letters is driven frame by frame from gate.js (same clock as the rendered
    blow-out); stop idle animations so they don't fight it */
 .gate.is-blown .gate__ch,
@@ -543,14 +558,27 @@ body.is-entered .diyos {
 }
 
 /* caption: gold label + max two short lines, no box (text shadow only); fade in 400 ms, out 300 ms */
+/* Placement is per caption (scenes.json "at": [x, y] in 0..1 of the viewport, per frame set).
+   The block is centred on that point and kept a margin clear of every edge. */
 .caption {
-  left: 50%;
-  bottom: max(9vh, calc(env(safe-area-inset-bottom) + 72px));
-  width: min(600px, calc(100vw - 32px));
-  text-align: center;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 0, 0, 0.7);
+  --turn-x: 0deg;
+  --turn-y: 0deg;
+  --cap-x: 0.5;
+  --cap-y: 0.86;
+  --cap-w: min(880px, calc(100vw - 32px));
+  --cap-gut: 16px;
+  left: clamp(
+    calc(var(--cap-w) / 2 + var(--cap-gut)),
+    calc(var(--cap-x) * 100%),
+    calc(100% - var(--cap-w) / 2 - var(--cap-gut))
+  );
+  top: calc(var(--cap-y) * 100%);
+  width: var(--cap-w);
+  text-align: var(--cap-align, center);
+  perspective: 900px;
+  transform-style: preserve-3d;
   opacity: 0;
-  transform: translate(-50%, 12px);
+  transform: translate(-50%, -50%) translateY(-14px); /* it lifts away as it goes */
   transition:
     opacity 300ms var(--ease-in),
     transform 300ms var(--ease-in);
@@ -558,27 +586,133 @@ body.is-entered .diyos {
 
 .caption.is-shown {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, -50%) rotateX(var(--turn-x)) rotateY(var(--turn-y));
   transition:
     opacity 400ms var(--ease-out),
     transform 400ms var(--ease-out);
 }
 
 .caption__label {
-  margin: 0 0 4px;
+  margin: 0 0 10px;
   font-weight: 800;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: clamp(16px, 1.5vw, 20px);
+  line-height: 1.35;
   color: var(--marigold);
 }
 
 .caption__text {
   margin: 0;
   font-weight: 600;
-  font-size: 23px;
-  line-height: 1.45;
+  /* the narrator's voice, at the scale of the picture it speaks over */
+  font-size: clamp(22px, 3.4vw, 50px);
+  line-height: 1.3;
   color: var(--cream);
   text-wrap: balance;
+}
+
+/* A word is the smallest thing that may move: the shirorekha runs across the whole of it
+   (CLAUDE.md 2), so characters are never split and nothing here letter-spaces. */
+.caption__word {
+  --lit: 1;
+  --dz: 0px;
+  --sx: 0px;
+  --sy: 2px;
+  --glow-on: 0;
+  display: inline-block;
+  color: var(--cream); /* fallback where color-mix is unsupported: fully lit */
+  color: color-mix(in oklab, var(--cream) calc(var(--lit) * 100%), var(--caption-dark));
+  text-shadow:
+    var(--sx) var(--sy) 6px rgba(0, 0, 0, 0.92),
+    /* the flame the reader carries */
+    0 0 calc(4px + var(--lit) * 22px) rgba(242, 163, 58, calc(var(--lit) * var(--lit) * 0.38)),
+    /* and the bulb wound round this word, in its own colour */
+    0 0 calc(6px + var(--glow-on) * 20px)
+      color-mix(in oklab, var(--glow, var(--marigold)) calc(var(--glow-on) * 80%), transparent);
+  transform: translate3d(0, 0, var(--dz));
+  transition:
+    color 90ms linear,
+    text-shadow 90ms linear;
+}
+
+/* the WebGL caption (scenes.json "lights"): the canvas sits over the film, under the live UI */
+.caption3d {
+  position: fixed;
+  z-index: 3;
+  display: none;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-14px);
+  transition:
+    opacity 320ms var(--ease-out),
+    transform 320ms var(--ease-out);
+}
+
+/* the DOM words still rule layout, wrapping and what a screen reader reads; the picture of them
+   is drawn in WebGL, so here they go invisible without going away */
+.caption.is-3d .caption__word {
+  color: transparent;
+  text-shadow: none;
+}
+
+/* the string of lights wound through the caption (scenes.json "lights") */
+.caption__lights {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+/* two layers of the same helix: the half that passes behind the word, and the half in front */
+.caption__wire {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.caption__wire.is-back {
+  stroke: rgba(255, 244, 224, 0.12);
+  stroke-width: 1;
+  transform: translateZ(-26px);
+}
+
+.caption__wire.is-front {
+  stroke: rgba(255, 244, 224, 0.3);
+  stroke-width: 1.3;
+  transform: translateZ(28px);
+}
+
+.caption__bulb {
+  --on: 0.16;
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  /* a hot core inside the glass, so the bead itself reads as lit: the halo stays tight, because
+     a bulb here must not wash light over the rendered frame behind it */
+  background: radial-gradient(
+    circle at 38% 34%,
+    color-mix(in oklab, var(--hue) calc(30% + var(--on) * 70%), var(--white-hot)) 0%,
+    var(--hue) 62%
+  );
+  opacity: calc(0.42 + 0.58 * var(--on));
+  box-shadow:
+    0 0 calc(2px + var(--on) * 6px) color-mix(in oklab, var(--hue) calc(var(--on) * 70%), transparent),
+    0 0 1px rgba(0, 0, 0, 0.55);
+  transform: translateZ(10px) scale(calc(0.82 + var(--on) * 0.34));
+  transition:
+    opacity 120ms linear,
+    box-shadow 120ms linear,
+    transform 120ms var(--ease-out);
+}
+
+.caption__label .caption__word {
+  color: var(--marigold);
+  color: color-mix(in oklab, var(--marigold) calc(var(--lit) * 100%), var(--caption-dark));
 }
 
 /* scroll cue on the black after entering, until the first scroll */
@@ -642,6 +776,20 @@ body.is-entered .diyos {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* the light rests where it is: words stay lit, nothing lifts or turns */
+  .caption.is-shown {
+    transform: translate(-50%, -50%);
+  }
+  .caption__word {
+    --lit: 1;
+    --dz: 0px;
+    transform: none;
+    transition: none;
+  }
+  .caption__bulb {
+    --on: 0.6;
+    transition: none;
+  }
   .js .gate__title,
   .js .gate__actions,
   .gate.is-leaving,

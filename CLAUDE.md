@@ -6,7 +6,9 @@ KUCC Tihar-Chhath Web UI Design Competition. School project, non-commercial.
 ## How it works (read first)
 
 - Every scene is built and rendered in **Blender (Cycles)**. Scrolling plays the
-  rendered frames forward and back. The browser never loads a 3D model.
+  rendered frames forward and back. The browser loads no 3D model of a *scene* — the picture is
+  always rendered frames. **Text is the exception** (owner, 2026-11-18): the caption layer may
+  use real WebGL, so the words can be lit by real lights in a real 3D space.
 - A thin **live web layer** sits on top: captions, diyo progress bar, cursor
   sparks, particle titles, sound.
 - Scenes are separate Blender files joined by **hidden cuts**: each scene ends on
