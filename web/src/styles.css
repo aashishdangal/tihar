@@ -565,6 +565,9 @@ body.is-entered .diyos {
   --turn-y: 0deg;
   --cap-x: 0.5;
   --cap-y: 0.86;
+  /* how far the line has had to be lifted to clear the HUD's bottom corners (caption.js).
+     It is kept apart from --cap-y so the authored "at" is still what ?place reads back. */
+  --cap-lift: 0px;
   --cap-w: min(880px, calc(100vw - 32px));
   --cap-gut: 16px;
   left: clamp(
@@ -572,7 +575,7 @@ body.is-entered .diyos {
     calc(var(--cap-x) * 100%),
     calc(100% - var(--cap-w) / 2 - var(--cap-gut))
   );
-  top: calc(var(--cap-y) * 100%);
+  top: calc(var(--cap-y) * 100% - var(--cap-lift));
   width: var(--cap-w);
   text-align: var(--cap-align, center);
   perspective: 900px;
@@ -766,9 +769,6 @@ body.is-entered .diyos {
   .diyos {
     right: max(16px, env(safe-area-inset-right));
     gap: 6px;
-  }
-  .caption {
-    bottom: max(14vh, calc(env(safe-area-inset-bottom) + 84px));
   }
   .caption__text {
     font-size: 20px;

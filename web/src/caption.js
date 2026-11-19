@@ -130,6 +130,7 @@ export function initCaption(el, { reduceMotion }) {
     request();
   });
   window.addEventListener("resize", () => {
+    liftClearOfHud(); // a turned phone puts the controls somewhere else
     measure();
     request();
   });
@@ -140,11 +141,39 @@ export function initCaption(el, { reduceMotion }) {
   const DEFAULT_AT = [0.5, 0.86];
   let placedKey = null; // which caption is currently placed, so ?place knows what it is editing
 
+  // The HUD owns the two bottom corners — the sound button on the left, the diyo bar on the
+  // right — and on a phone the caption is nearly the full width of the screen, so a line placed
+  // low lands on top of them. "at" says where the line WANTS to sit; this is how far up it has
+  // to come to clear whichever control it actually overlaps. Nothing moves on a wide screen,
+  // where the caption is 880px in the middle and the corners are far away.
+  const HUD_GAP = 12; // air between the last line and the control below it
+  const TOP_MARGIN = 16; // and it may never be pushed off the top of the screen
+
+  function liftClearOfHud() {
+    el.style.setProperty("--cap-lift", "0px");
+    const box = el.getBoundingClientRect();
+    if (!box.height) return;
+    let ceiling = Infinity;
+    for (const control of [document.getElementById("sound"), document.querySelector(".diyos")]) {
+      if (!control) continue;
+      const r = control.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      if (box.right <= r.left || box.left >= r.right) continue; // they never meet across the page
+      ceiling = Math.min(ceiling, r.top);
+    }
+    if (!Number.isFinite(ceiling)) return;
+    const over = box.bottom + HUD_GAP - ceiling;
+    if (over <= 0) return;
+    const lift = Math.min(over, box.top - TOP_MARGIN);
+    if (lift > 0) el.style.setProperty("--cap-lift", `${lift.toFixed(1)}px`);
+  }
+
   function placeAt(at, align) {
     const [x, y] = at;
     el.style.setProperty("--cap-x", clamp(x, 0, 1).toFixed(4));
     el.style.setProperty("--cap-y", clamp(y, 0.06, 0.94).toFixed(4));
     el.style.setProperty("--cap-align", align ?? (x < 0.34 ? "left" : x > 0.66 ? "right" : "center"));
+    liftClearOfHud(); // before measure: the WebGL layer is built from where the words END UP
     measure();
   }
 
