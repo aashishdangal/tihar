@@ -40,6 +40,7 @@ import {
   ShadowMaterial,
   AdditiveBlending,
   SphereGeometry,
+  Vector2,
   Vector3,
   RepeatWrapping,
   SRGBColorSpace,
@@ -73,6 +74,8 @@ const PEARL = 0xe98ba8; // and the pink pearls set into it
 const LAMP_I = 5200; // candela, in a world measured in pixels
 const MALA_HEADS = 9; // how many flowers on each strand
 const POINTER_REACH = 130; // px around the cursor that actually disturbs the flowers
+const RICE = 0xf1e4c6; // akshata: husked rice, warmed by whatever lamp is near
+const POUR_MS = 1150;
 const INK = 0x14181f; // the crow's blue-black: dark type, because this frame is bright everywhere
 const BITES = 7; // how many times the crow goes at the line
 const PECK_MS = 480; // a crow pecks fast; at 820ms the line outstayed every other caption
@@ -214,6 +217,54 @@ function addSmoke(material, uniforms) {
       );
   };
   material.customProgramCacheKey = () => "smoke";
+}
+
+/** Akshata: the word is laid out in rice.
+ *
+ *  Not a grain texture over the letters — that is what the abir powder does, and it would only
+ *  be the same trick in a paler colour. Here the word is divided into cells about a third of a
+ *  stroke wide, and each cell asks the glyph whether it stands on a letter. Where it does, one
+ *  grain is drawn: an ellipse, turned at its own angle, offset within its cell. So the letters
+ *  are built OUT of grains, with the edges as uneven as a line of rice laid by hand.
+ *
+ *  uPour runs the arrival: the grains fall in, each at its own moment, and settle.
+ */
+function addGrain(material, uniforms, grid) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uPour = uniforms.uPour;
+    shader.uniforms.uGrid = { value: grid };
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+         uniform float uPour;
+         uniform vec2 uGrid;
+         float grainHash(vec2 c) {
+           return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453);
+         }`
+      )
+      .replace(
+        "#include <dithering_fragment>",
+        `#include <dithering_fragment>
+         vec2 cell = floor(vMapUv * uGrid);
+         vec2 centre = (cell + 0.5) / uGrid;
+         float onLetter = texture2D(map, centre).a;
+         float h1 = grainHash(cell);
+         float h2 = grainHash(cell + 19.7);
+         float h3 = grainHash(cell + 41.3);
+         // each grain falls in at its own moment and settles
+         float arrive = clamp((uPour - h1 * 0.55) / 0.45, 0.0, 1.0);
+         vec2 local = (vMapUv - centre) * uGrid;
+         local += (vec2(h2, h3) - 0.5) * 0.3;           // sat where it fell, not on a grid
+         local.y += (1.0 - arrive) * 2.6;               // dropped in from above
+         float ang = h2 * 3.14159;
+         vec2 g = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * local;
+         g.x *= 1.9;                                     // a grain is long, not round
+         float grain = smoothstep(0.62, 0.14, length(g));
+         gl_FragColor.a = (onLetter > 0.35 ? 1.0 : 0.0) * grain * arrive;`
+      );
+  };
+  material.customProgramCacheKey = () => "grain";
 }
 
 /** Abir: the word is powder rather than paint.
@@ -444,6 +495,55 @@ function roomEnv(renderer) {
   return envTex;
 }
 
+/** The wedge of light a door throws across the floor when it is opened.
+ *  Warm at the sill, falling away along its length and soft at both long edges: drawn once and
+ *  then widened and brightened over time rather than redrawn. */
+let doorTex = null;
+function doorLightTexture() {
+  if (doorTex) return doorTex;
+  const W = 512;
+  const H = 256;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const x = c.getContext("2d");
+  const g = x.createLinearGradient(0, 0, W, 0);
+  g.addColorStop(0, "rgba(255, 214, 150, 0.7)");
+  g.addColorStop(0.25, "rgba(255, 190, 110, 0.4)");
+  g.addColorStop(0.65, "rgba(243, 160, 70, 0.14)");
+  g.addColorStop(1, "rgba(220, 130, 40, 0)");
+  x.fillStyle = g;
+  // a wedge, not a rectangle: narrow at the sill and spreading as it goes
+  x.beginPath();
+  x.moveTo(0, H * 0.34);
+  x.lineTo(W, 0);
+  x.lineTo(W, H);
+  x.lineTo(0, H * 0.66);
+  x.closePath();
+  x.fill();
+  // Soften every edge, or it reads as a lit rectangle rather than as light. Both long sides
+  // first, then the sill end and the far end, so nothing in the shaft has a boundary.
+  x.globalCompositeOperation = "destination-out";
+  const acrossIt = x.createLinearGradient(0, 0, 0, H);
+  acrossIt.addColorStop(0, "rgba(0,0,0,1)");
+  acrossIt.addColorStop(0.42, "rgba(0,0,0,0)");
+  acrossIt.addColorStop(0.58, "rgba(0,0,0,0)");
+  acrossIt.addColorStop(1, "rgba(0,0,0,1)");
+  x.fillStyle = acrossIt;
+  x.fillRect(0, 0, W, H);
+  const alongIt = x.createLinearGradient(0, 0, W, 0);
+  alongIt.addColorStop(0, "rgba(0,0,0,0.85)"); // the sill: light does not begin with an edge
+  alongIt.addColorStop(0.14, "rgba(0,0,0,0)");
+  alongIt.addColorStop(0.6, "rgba(0,0,0,0)");
+  alongIt.addColorStop(1, "rgba(0,0,0,1)");
+  x.fillStyle = alongIt;
+  x.fillRect(0, 0, W, H);
+  x.globalCompositeOperation = "source-over";
+  doorTex = new CanvasTexture(c);
+  doorTex.colorSpace = SRGBColorSpace;
+  return doorTex;
+}
+
 export function createCaption3D({ reduceMotion }) {
   const canvas = document.createElement("canvas");
   canvas.className = "caption3d";
@@ -475,7 +575,7 @@ export function createCaption3D({ reduceMotion }) {
   let fontReady = false;
   let hideTimer = 0;
   let visible = false;
-  let style = { lights: false, wood: false, smoke: false, lay: false, feather: false, peck: false, powder: false, mala: false, diyo: false, gilt: false };
+  let style = { lights: false, wood: false, smoke: false, lay: false, feather: false, peck: false, powder: false, mala: false, diyo: false, gilt: false, door: false, grain: false };
   let peckTimer = 0;
   const peckUniforms = { uEaten: { value: 0 } };
   let powderTimer = 0;
@@ -485,6 +585,10 @@ export function createCaption3D({ reduceMotion }) {
   let strands = [];
   let lamps = [];
   let pearls = [];
+  let doorTimer = 0;
+  let door = null;
+  let grainTimer = 0;
+  const grainUniforms = { uPour: { value: 1 } };
   let lampTimer = 0;
   let swingTimer = 0;
   let swingLast = 0;
@@ -577,6 +681,14 @@ export function createCaption3D({ reduceMotion }) {
     swingTimer = 0;
     cancelAnimationFrame(lampTimer);
     lampTimer = 0;
+    cancelAnimationFrame(doorTimer);
+    doorTimer = 0;
+    if (door) {
+      root.remove(door);
+      door.geometry.dispose();
+      door.material.dispose();
+      door = null;
+    }
     for (const pearl of pearls) {
       root.remove(pearl);
       pearl.geometry.dispose();
@@ -709,6 +821,54 @@ export function createCaption3D({ reduceMotion }) {
 
     placeStrands();
     return moving;
+  }
+
+  /** Pour the rice: the grains fall in and settle, each at its own moment. */
+  function pourGrain() {
+    if (reduceMotion()) {
+      grainUniforms.uPour.value = 1;
+      return;
+    }
+    cancelAnimationFrame(grainTimer);
+    grainUniforms.uPour.value = 0;
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / POUR_MS);
+      grainUniforms.uPour.value = t * t * (3 - 2 * t);
+      dirty = true;
+      renderer.render(scene, camera);
+      grainTimer = t < 1 ? requestAnimationFrame(step) : 0;
+    };
+    grainTimer = requestAnimationFrame(step);
+  }
+
+  /** Open the door: the wedge widens from the sill and the words come up as it reaches them.
+   *  The light is what arrives, not the type — the line is simply what the light finds. */
+  function openDoor() {
+    if (!door || reduceMotion()) return;
+    cancelAnimationFrame(doorTimer);
+    const t0 = performance.now();
+    const ms = 1100;
+    const words = items.map((it) => it.mesh);
+    const left = Math.min(...items.map((it) => it.mesh.position.x));
+    const right = Math.max(...items.map((it) => it.mesh.position.x));
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / ms);
+      const e = 1 - Math.pow(1 - t, 2.4); // quick at first, easing as the door comes to rest
+      door.material.opacity = e * 0.78 * (1 - Math.pow(t, 6) * 0.3); // bright as it opens, then settles
+      door.scale.set(0.12 + e * 0.88, 0.55 + e * 0.45, 1);
+      // the edge of the light, travelling along the line
+      const edge = left + (right - left + 1) * (e * 1.25 - 0.1);
+      for (const m of words) {
+        const reached = Math.min(1, Math.max(0, (edge - m.position.x) / 60 + 0.5));
+        m.material.emissiveIntensity = 0.25 + reached * 1.15;
+      }
+      dirty = true;
+      renderer.render(scene, camera);
+      if (t < 1) doorTimer = requestAnimationFrame(step);
+      else doorTimer = 0;
+    };
+    doorTimer = requestAnimationFrame(step);
   }
 
   /** Light the lamps the pointer has reached, and keep them burning.
@@ -860,6 +1020,8 @@ export function createCaption3D({ reduceMotion }) {
         mala: !!opts.mala,
         diyo: !!opts.diyo,
         gilt: !!opts.gilt,
+        door: !!opts.door,
+        grain: !!opts.grain,
       };
       const rects = words.map((w) => w.getBoundingClientRect()).filter((r) => r.width);
       if (!rects.length) return;
@@ -924,6 +1086,18 @@ export function createCaption3D({ reduceMotion }) {
           mat.normalMap = carveNormals(ctx, cw, ch);
           mat.normalScale.set(0.55, 0.55);
         }
+        if (style.grain) {
+          mat.color.setHex(RICE);
+          mat.roughness = 0.95; // rice has no shine
+          mat.metalness = 0;
+          mat.emissive = new Color(0x8b7c56);
+          mat.emissiveIntensity = 1.25; // rice on a dark floor needs its own light
+          mat.transparent = true;
+        }
+        if (style.door) {
+          mat.emissive = new Color(0x53300c);
+          mat.emissiveIntensity = 0.25; // what the light has not reached yet
+        }
         if (style.powder) {
           mat.roughness = 0.97; // abir has no shine at all
           mat.metalness = 0;
@@ -953,6 +1127,10 @@ export function createCaption3D({ reduceMotion }) {
         if (style.smoke) addSmoke(mat, smokeUniforms);
         if (style.peck) addPeck(mat, peckUniforms);
         if (style.powder) addPowder(mat, powderUniforms, i * 0.137); // a different grain per word
+        if (style.grain) {
+          const px = (r.height / 1.3) * 0.15; // a grain, in screen pixels: coarse enough to see
+          addGrain(mat, grainUniforms, new Vector2(Math.round(cw / px), Math.round(ch / px)));
+        }
         const mesh = new Mesh(new PlaneGeometry(w, h), mat);
         mesh.renderOrder = 1;
         const [wx, wy] = toWorld(r.left + r.width / 2, r.top + r.height / 2);
@@ -1003,6 +1181,30 @@ export function createCaption3D({ reduceMotion }) {
       } else {
         renderer.shadowMap.enabled = false;
         flame.castShadow = false;
+      }
+      if (style.door) {
+        // Deusi happens AT a door: the singers stand outside and the household opens it. So the
+        // line is not simply shown — a door opens on it, and the light runs along the words from
+        // the sill end.
+        const fs6 = rects[0].height / 1.3;
+        const left = Math.min(...rects.map((r) => r.left));
+        const right = Math.max(...rects.map((r) => r.right));
+        const top2 = Math.min(...rects.map((r) => r.top));
+        const bottom = Math.max(...rects.map((r) => r.bottom));
+        const [cx, cy] = toWorld((left + right) / 2, (top2 + bottom) / 2);
+        door = new Mesh(
+          new PlaneGeometry(right - left + fs6 * 5, bottom - top2 + fs6 * 2.6),
+          new MeshBasicMaterial({
+            map: doorLightTexture(),
+            transparent: true,
+            depthWrite: false,
+            blending: AdditiveBlending,
+            opacity: 0,
+          })
+        );
+        door.position.set(cx, cy, -14); // behind the words
+        door.renderOrder = 0;
+        root.add(door);
       }
       if (style.gilt) {
         // A few pearls, set in the gaps BETWEEN words rather than strung along every bar: on
@@ -1216,6 +1418,8 @@ export function createCaption3D({ reduceMotion }) {
           powderUniforms.uScatter.value = 0;
           runPowder(true);
         }
+        if (style.door) openDoor();
+        if (style.grain) pourGrain();
         canvas.style.display = "block";
         requestAnimationFrame(() => {
           canvas.style.opacity = "1";
@@ -1275,6 +1479,8 @@ export function createCaption3D({ reduceMotion }) {
         runPowder(true);
       }
       if (style.peck) peckUniforms.uEaten.value = 0;
+      if (style.door) openDoor();
+      if (style.grain) pourGrain();
       dirty = true;
     },
 
@@ -1298,6 +1504,8 @@ export function createCaption3D({ reduceMotion }) {
       cancelAnimationFrame(powderTimer);
       cancelAnimationFrame(swingTimer);
       cancelAnimationFrame(lampTimer);
+      cancelAnimationFrame(doorTimer);
+      cancelAnimationFrame(grainTimer);
       clearTimeout(hideTimer);
       window.removeEventListener("resize", resize);
       clear();

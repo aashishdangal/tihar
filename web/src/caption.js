@@ -70,7 +70,7 @@ export function initCaption(el, { reduceMotion }) {
     if (strand) return strand;
     strand = createCaption3D({ reduceMotion });
     strand.mount(document.body);
-    if (window.__probe) window.__capLayer = strand; // ?probe: watch the layer from the console
+    if (new URLSearchParams(location.search).has("probe")) window.__capLayer = strand;
     return strand;
   }
 
@@ -168,6 +168,8 @@ export function initCaption(el, { reduceMotion }) {
         mala: !!opts.mala,
         diyo: !!opts.diyo,
         gilt: !!opts.gilt,
+        door: !!opts.door,
+        grain: !!opts.grain,
       };
       lit = Object.values(treatment).some(Boolean);
       el.classList.toggle("is-3d", lit);

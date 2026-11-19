@@ -284,6 +284,8 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
         mala: !!b.caption.mala,
         diyo: !!b.caption.diyo,
         gilt: !!b.caption.gilt,
+        door: !!b.caption.door,
+        grain: !!b.caption.grain,
         align: b.caption.align ?? p.scene.captionAlign,
         set,
         key: `${p.scene.id}:${b.caption.label}`,
