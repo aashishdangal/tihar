@@ -33,7 +33,8 @@ export function initCaption(el, { reduceMotion }) {
   const label = el.querySelector("[data-label]");
   const text = el.querySelector("[data-text]");
   let words = [];
-  let lit = false; // this caption is the WebGL one
+  let lit = false; // this caption is drawn by the WebGL layer
+  let treatment = {};
   let strand = null;
   let spots = []; // cached word centres (the caption is position:fixed, so scroll cannot move them)
   let px = null;
@@ -59,7 +60,7 @@ export function initCaption(el, { reduceMotion }) {
       const r = w.getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     });
-    if (strand && lit) strand.build(words);
+    if (strand && lit) strand.build(words, treatment);
   }
 
   // The lit caption (scenes.json "lights") is drawn in WebGL instead of CSS: see caption3d.js.
@@ -69,6 +70,7 @@ export function initCaption(el, { reduceMotion }) {
     if (strand) return strand;
     strand = createCaption3D({ reduceMotion });
     strand.mount(document.body);
+    if (window.__probe) window.__capLayer = strand; // ?probe: watch the layer from the console
     return strand;
   }
 
@@ -154,13 +156,27 @@ export function initCaption(el, { reduceMotion }) {
       if (labelText) fill(label, labelText);
       else label.textContent = "";
       words = fill(text, bodyText);
-      lit = !!opts.lights;
+      // a caption may be lit (scene 1's hanging lights), carved, taken by smoke, or any mix
+      treatment = {
+        lights: !!opts.lights,
+        wood: !!opts.wood,
+        smoke: !!opts.smoke,
+        lay: !!opts.lay,
+        feather: !!opts.feather,
+        peck: !!opts.peck,
+        powder: !!opts.powder,
+        mala: !!opts.mala,
+        diyo: !!opts.diyo,
+        gilt: !!opts.gilt,
+      };
+      lit = Object.values(treatment).some(Boolean);
       el.classList.toggle("is-3d", lit);
       if (lit) ensureStrand();
       else strand?.setVisible(false);
       const at = opts.at && !Array.isArray(opts.at) ? opts.at[opts.set] ?? opts.at.d : opts.at;
       placedKey = opts.key ?? null;
       placeAt(overrides.get(placedKey) ?? at ?? DEFAULT_AT, opts.align);
+      if (lit) strand?.restart(); // this caption makes its own entrance, even mid-sequence
       if (reduceMotion()) {
         for (const w of words) w.style.setProperty("--lit", "1");
       } else {

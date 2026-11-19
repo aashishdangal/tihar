@@ -37,7 +37,10 @@ Detailed specs live in `docs/`. Read the relevant file before working on a part:
 6. **Faces stay soft.** People are shown in silhouette, from behind, wide, or as
    hands in close-up with faces out of focus. Statues and animals may be sharp.
 7. **One accent colour:** marigold `#F2A33A`. Each scene keeps its own muted palette.
-8. **Captions:** small label + max 2 short lines (~15 words).
+8. **Captions:** max 2 short lines (~15 words). No label line — the marigold labels
+   (`दिन १ · काग तिहार` and the rest) were dropped from every scene on 2026-11-18, so the day
+   each scene belongs to is no longer named on screen. The diyo progress bar is now the only
+   thing that can carry it.
 
 ## Blender MCP rules
 
