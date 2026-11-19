@@ -286,6 +286,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
         gilt: !!b.caption.gilt,
         door: !!b.caption.door,
         grain: !!b.caption.grain,
+        bhaitika: !!b.caption.bhaitika,
         align: b.caption.align ?? p.scene.captionAlign,
         set,
         key: `${p.scene.id}:${b.caption.label}`,
@@ -429,9 +430,6 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     });
     finaleEl.querySelector("[data-again]")?.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
-    });
-    finaleEl.querySelector("[data-credits]")?.addEventListener("click", () => {
-      window.open(`${import.meta.env.BASE_URL}credits.html`, "_blank", "noopener");
     });
   }
 

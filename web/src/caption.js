@@ -170,6 +170,7 @@ export function initCaption(el, { reduceMotion }) {
         gilt: !!opts.gilt,
         door: !!opts.door,
         grain: !!opts.grain,
+        bhaitika: !!opts.bhaitika,
       };
       lit = Object.values(treatment).some(Boolean);
       el.classList.toggle("is-3d", lit);

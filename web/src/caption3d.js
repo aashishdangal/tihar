@@ -85,6 +85,27 @@ const MARGIN = 70; // room round the caption for the drops and the light that sp
 
 const HUES = [0xf2a33a, 0x6fb0e0, 0x8ccfa2, 0xe291ad]; // the valley's own lights
 
+// The seven colours of the saptarangi tika, in the order a thumb lays them on — but carried
+// here as EMISSION on cream letters rather than as the colour of the type. Seven coloured words
+// is a flag; seven colours that flush through warm letters as the thumb passes and fade back to
+// the marigold is a tika being put on. Each is pulled most of the way to the accent (rule 7:
+// one accent colour), so what the reader sees is warmth with a cast in it, never a spectrum.
+const TIKA_RAW = [0xc93a2f, 0xd4741f, 0xd2a52c, 0x3d9159, 0x3f74b4, 0x7b4ea8, 0xeee3cf];
+const TIKA = TIKA_RAW.map((c) => new Color(c).lerp(new Color(0xf2a33a), 0.62));
+const FLUSH = 0.85; // how bright a word goes as its colour arrives
+const SETTLE = 0.16; // and what it keeps afterwards: a warm floor, so the line stays legible
+const TIKA_STEP = 70; // ms between one word's press and the next: the thumb moves along the line
+// Going out, the line does NOT get its entrance played backwards. The caption itself leaves in
+// about a third of a second, and a layer that takes two seconds to scatter is still sitting on
+// screen after the words it belongs to have gone. So the whole lift-off is one short move: every
+// word starts within TIKA_OUT_SPREAD of the first, and all of it is over in TIKA_OUT_MS + that.
+const TIKA_OUT_MS = 420;
+const TIKA_OUT_SPREAD = 150;
+const MAKHAMALI = 0x7b2d6e; // globe amaranth: the flower the whole story is staked on
+const DUSK = new Color(0x6f5c3c); // what a sayapatri head goes to once its day is over
+const WILT = 0.78; // how far toward DUSK the sun carries it
+const SUN_MS = 9000; // one morning crossing the line — the hours Jamuna's puja held Yamaraj
+
 /** A normal map for one word, built from its own glyph coverage.
  *
  *  The alpha of the rasterised word is read as a height field, softened, and turned into
@@ -425,6 +446,78 @@ function marigoldTexture() {
   return marigoldTex;
 }
 
+/** Makhamali: a globe amaranth head.
+ *
+ *  Not a marigold in another colour. A makhamali is a tight ball of small papery bracts packed
+ *  in a spiral, with a dry chalky bloom on it rather than a petal's sheen — which is exactly why
+ *  it keeps: there is almost no water in it to lose. Drawn flat and facing the reader, like the
+ *  marigold, so a strand of them shares one light.
+ */
+let makhamaliTex = null;
+function makhamaliTexture() {
+  if (makhamaliTex) return makhamaliTex;
+  const N = 320;
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const x = c.getContext("2d");
+  const mid = N / 2;
+
+  // the body of the head: dark at the rim, so the ball turns away at its edge
+  const body = x.createRadialGradient(mid - N * 0.1, mid - N * 0.12, N * 0.04, mid, mid, N * 0.42);
+  body.addColorStop(0, "hsl(312 42% 44%)");
+  body.addColorStop(0.65, "hsl(310 46% 31%)");
+  body.addColorStop(1, "hsl(305 44% 17%)");
+  x.fillStyle = body;
+  x.beginPath();
+  // a lumpy circle: the bracts stand out past the outline here and there
+  for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.18) {
+    const r = N * (0.40 + Math.sin(a * 7.3) * 0.012 + Math.sin(a * 3.1) * 0.014);
+    const px = mid + Math.cos(a) * r;
+    const py = mid + Math.sin(a) * r;
+    if (a === 0) x.moveTo(px, py);
+    else x.lineTo(px, py);
+  }
+  x.closePath();
+  x.fill();
+
+  // the bracts, laid in a spiral from the rim inward, each one a small papery scale
+  x.globalCompositeOperation = "source-atop";
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < 230; i++) {
+    const t = i / 230;
+    const rad = N * 0.40 * Math.sqrt(1 - t * 0.92);
+    const a = i * GOLDEN;
+    const bx = mid + Math.cos(a) * rad;
+    const by = mid + Math.sin(a) * rad;
+    const r = N * (0.028 + t * 0.016);
+    const lit = 26 + (1 - rad / (N * 0.4)) * 16 + (Math.random() - 0.5) * 9;
+    x.save();
+    x.translate(bx, by);
+    x.rotate(a + Math.PI / 2);
+    const g = x.createLinearGradient(0, r, 0, -r);
+    g.addColorStop(0, `hsl(308 44% ${Math.max(10, lit - 12)}%)`);
+    g.addColorStop(1, `hsl(316 38% ${lit + 13}%)`); // the dry pale tip every bract has
+    x.fillStyle = g;
+    x.beginPath();
+    x.ellipse(0, 0, r * 0.72, r, 0, 0, Math.PI * 2);
+    x.fill();
+    x.restore();
+  }
+
+  // the chalky bloom, and one light direction over the whole head
+  const lit2 = x.createLinearGradient(0, 0, N * 0.9, N);
+  lit2.addColorStop(0, "rgba(255, 228, 240, 0.30)");
+  lit2.addColorStop(0.5, "rgba(0,0,0,0)");
+  lit2.addColorStop(1, "rgba(20, 0, 16, 0.45)");
+  x.fillStyle = lit2;
+  x.fillRect(0, 0, N, N);
+  x.globalCompositeOperation = "source-over";
+
+  makhamaliTex = new CanvasTexture(c);
+  makhamaliTex.colorSpace = SRGBColorSpace;
+  return makhamaliTex;
+}
+
 // The marks a diyo may stand in for: candrabindu, anusvara, visarga. Each is a small round
 // thing already sitting above the line — a moon-dot waiting to be a lamp.
 const LAMP_MARKS = /[\u0901\u0902\u0903]/;
@@ -575,10 +668,12 @@ export function createCaption3D({ reduceMotion }) {
   let fontReady = false;
   let hideTimer = 0;
   let visible = false;
-  let style = { lights: false, wood: false, smoke: false, lay: false, feather: false, peck: false, powder: false, mala: false, diyo: false, gilt: false, door: false, grain: false };
+  let style = { lights: false, wood: false, smoke: false, lay: false, feather: false, peck: false, powder: false, mala: false, diyo: false, gilt: false, door: false, grain: false, bhaitika: false };
   let peckTimer = 0;
   const peckUniforms = { uEaten: { value: 0 } };
   let powderTimer = 0;
+  let tikaTimer = 0; // the seven colours go on one word at a time, so each word has its own press
+  let sunTimer = 0; // the morning that passes over the Bhai Tika line
   const powderUniforms = { uPress: { value: 1 }, uScatter: { value: 0 }, uGrain: { value: null } };
   let ledge = null;
   let mala = [];
@@ -683,6 +778,10 @@ export function createCaption3D({ reduceMotion }) {
     lampTimer = 0;
     cancelAnimationFrame(doorTimer);
     doorTimer = 0;
+    cancelAnimationFrame(tikaTimer);
+    tikaTimer = 0;
+    cancelAnimationFrame(sunTimer);
+    sunTimer = 0;
     if (door) {
       root.remove(door);
       door.geometry.dispose();
@@ -751,12 +850,33 @@ export function createCaption3D({ reduceMotion }) {
       st.pts.forEach((pt, k) => pos.setXYZ(k, pt.x, pt.y, 0));
       pos.needsUpdate = true;
       st.cord.geometry.computeBoundingSphere();
+      const end = st.pts[st.pts.length - 1];
+      const cordNear = Math.min(
+        1,
+        Math.max(0, (W / 2 - Math.abs(end.x)) / (st.step * 1.1)),
+        Math.max(0, (H / 2 - Math.abs(end.y)) / (st.step * 1.1))
+      );
+      st.cord.material.opacity = 0.55 * cordNear;
       st.heads.forEach((m, k) => {
         const pt = st.pts[k + 1];
         const above = st.pts[k];
-        m.position.set(pt.x, pt.y, k % 2 ? 26 : -22);
+        // the two flowers of a Bhai Tika strand are threaded on ONE cord, so they may not sit
+        // far apart in depth: at this focal length a head at z=26 near the edge of the canvas
+        // projects visibly off the line it is tied to
+        m.position.set(pt.x, pt.y, (k % 2 ? 26 : -22) * (m.userData.wilts === undefined ? 1 : 0.3));
         // each head lies along its own link, so the whole strand curls rather than staying straight
         m.rotation.z = Math.atan2(pt.x - above.x, -(pt.y - above.y)) * -1 + st.tilt[k];
+        // The canvas ends somewhere, and a flower that reaches that line is cut in half by it —
+        // which is what reads as a rectangle in the air with the strand disappearing into it.
+        // So a head fades out over the last stretch before the edge and is gone by the time it
+        // gets there: nothing on the layer may ever end on a straight line.
+        const near = Math.min(
+          1,
+          Math.max(0, (W / 2 - Math.abs(pt.x)) / (st.step * 1.1)),
+          Math.max(0, (H / 2 - Math.abs(pt.y)) / (st.step * 1.1))
+        );
+        m.material.opacity = near * near * (3 - 2 * near);
+        m.visible = near > 0.015;
       });
     }
   }
@@ -961,6 +1081,89 @@ export function createCaption3D({ reduceMotion }) {
     powderTimer = requestAnimationFrame(step);
   }
 
+  /** The seven colours, laid on one word at a time.
+   *
+   *  Same press as the abir (addPowder blooms a word outward from its own centre, the way a
+   *  thumb puts a tika on), but each word gets its turn TIKA_STEP later than the one before it,
+   *  so the colour travels along the line in the order the seven are laid on. Going out, the
+   *  powder lifts off in the same order. One ticker for the whole line, not one per word.
+   */
+  function runTika(on) {
+    cancelAnimationFrame(tikaTimer);
+    const marked = items.filter((it) => it.tika);
+    if (!marked.length) return;
+    const ms = on ? POWDER_IN_MS : TIKA_OUT_MS;
+    const gap = on ? TIKA_STEP : TIKA_OUT_SPREAD / Math.max(1, marked.length - 1);
+    const total = ms + gap * (marked.length - 1);
+    const t0 = performance.now();
+    if (on) for (const it of marked) it.tika.uScatter.value = 0;
+    const step = (now) => {
+      const gone = now - t0;
+      marked.forEach((it, i) => {
+        const t = Math.min(1, Math.max(0, (gone - i * gap) / ms));
+        const e = t * t * (3 - 2 * t);
+        if (on) {
+          it.tika.uPress.value = e;
+          // the colour arrives with the thumb and then lets go: bright on contact, and from
+          // there down to a warm floor. A word that KEPT its colour would be coloured type.
+          it.glowT = SETTLE + (FLUSH - SETTLE) * Math.sin(e * Math.PI) ** 0.7;
+        } else {
+          it.tika.uScatter.value = e;
+          it.glowT = SETTLE * (1 - e);
+          if (i === 0) {
+            for (const f of mala) f.material.opacity = Math.min(f.material.opacity, 1 - e);
+            for (const st of strands) st.cord.material.opacity *= 1 - e;
+          }
+        }
+        litWord(it);
+      });
+      dirty = true;
+      renderer.render(scene, camera);
+      tikaTimer = gone < total ? requestAnimationFrame(step) : 0;
+    };
+    tikaTimer = requestAnimationFrame(step);
+  }
+
+  /** Only the tika writes a word's glow now, but it is still written in one place. */
+  function litWord(it) {
+    it.mesh.material.emissiveIntensity = it.glowT ?? SETTLE;
+  }
+
+  /** One morning, in nine seconds.
+   *
+   *  The morning passes over the line from left to right — nothing is drawn for it, the light
+   *  itself is not shown — and every sayapatri head it has gone past loses its colour and its
+   *  hold, drooping and shrinking a little, while the makhamali beside it stays exactly as it
+   *  was. Nothing is stated: the caption simply outlives the flowers that were supposed to
+   *  wilt, which is the bargain the line is quoting.
+   */
+  function runSun() {
+    if (!strands.length || reduceMotion()) return;
+    cancelAnimationFrame(sunTimer);
+    const t0 = performance.now();
+    const from = -W * 0.8;
+    const to = W * 0.8;
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / SUN_MS);
+      const e = t * t * (3 - 2 * t); // it comes on slowly, crosses, and settles
+      const edge = from + (to - from) * e;
+      for (const st of strands) {
+        st.heads.forEach((f, k) => {
+          if (!f.userData.wilts) return;
+          const past = Math.min(1, Math.max(0, (edge - f.position.x) / 110 + 0.5));
+          f.material.color.copy(f.userData.base).lerp(DUSK, past * WILT);
+          f.scale.setScalar(f.userData.size * (1 - past * 0.17));
+          st.tilt[k] = st.rest[k] + past * 0.6 * st.side; // it gives up its hold and hangs over
+        });
+      }
+      placeStrands();
+      dirty = true;
+      renderer.render(scene, camera);
+      sunTimer = t < 1 && visible ? requestAnimationFrame(step) : 0;
+    };
+    sunTimer = requestAnimationFrame(step);
+  }
+
   /** The crow takes the line apart on the way out: bites open one after another until it is
    *  gone. Like the smoke, a short self-cancelling ticker, never a second permanent loop. */
   function runPeck(onDone) {
@@ -1022,6 +1225,7 @@ export function createCaption3D({ reduceMotion }) {
         gilt: !!opts.gilt,
         door: !!opts.door,
         grain: !!opts.grain,
+        bhaitika: !!opts.bhaitika,
       };
       const rects = words.map((w) => w.getBoundingClientRect()).filter((r) => r.width);
       if (!rects.length) return;
@@ -1033,10 +1237,10 @@ export function createCaption3D({ reduceMotion }) {
         width: Math.max(...rects.map((r) => r.right)) - left,
         height: Math.max(...rects.map((r) => r.bottom)) - top,
       };
-      if (style.mala) {
+      if (style.mala || style.bhaitika) {
         // the strands hang this far down, and may swing most of that distance sideways
         const fs0 = rects[0].height / 1.3;
-        const reach = fs0 * 0.27 * 1.55 * MALA_HEADS + fs0;
+        const reach = fs0 * 0.27 * 1.55 * MALA_HEADS + fs0 * 1.6;
         fit(box, { bottom: reach + MARGIN, left: reach * 0.8, right: reach * 0.8, top: MARGIN });
       } else if (style.diyo) {
         fit(box, { bottom: rects[0].height * 1.5 + MARGIN });
@@ -1086,6 +1290,18 @@ export function createCaption3D({ reduceMotion }) {
           mat.normalMap = carveNormals(ctx, cw, ch);
           mat.normalScale.set(0.55, 0.55);
         }
+        if (style.bhaitika) {
+          // The type stays the cream it is everywhere else on the site; the tika is what LANDS
+          // on it. Powder-matte, cut slightly into the surface, and lit from inside by its own
+          // one of the seven — so the colour reads as pigment arriving, not as coloured text.
+          mat.color.setHex(CREAM);
+          mat.roughness = 0.96; // powder has no shine at all
+          mat.metalness = 0;
+          mat.emissive = TIKA[i % TIKA.length].clone();
+          mat.emissiveIntensity = reduceMotion() ? SETTLE : 0;
+          mat.normalMap = carveNormals(ctx, cw, ch);
+          mat.normalScale.set(0.5, 0.5);
+        }
         if (style.grain) {
           mat.color.setHex(RICE);
           mat.roughness = 0.95; // rice has no shine
@@ -1127,6 +1343,17 @@ export function createCaption3D({ reduceMotion }) {
         if (style.smoke) addSmoke(mat, smokeUniforms);
         if (style.peck) addPeck(mat, peckUniforms);
         if (style.powder) addPowder(mat, powderUniforms, i * 0.137); // a different grain per word
+        let tika = null;
+        if (style.bhaitika) {
+          // the same powder shader, but one set of uniforms PER WORD: the press has to arrive
+          // at each word in its turn, and shared uniforms can only press them all at once
+          tika = {
+            uPress: { value: reduceMotion() ? 1 : 0 },
+            uScatter: { value: 0 },
+            uGrain: { value: smokeNoise() },
+          };
+          addPowder(mat, tika, i * 0.137);
+        }
         if (style.grain) {
           const px = (r.height / 1.3) * 0.15; // a grain, in screen pixels: coarse enough to see
           addGrain(mat, grainUniforms, new Vector2(Math.round(cw / px), Math.round(ch / px)));
@@ -1141,7 +1368,7 @@ export function createCaption3D({ reduceMotion }) {
           mesh.castShadow = true;
         }
         root.add(mesh);
-        items.push({ mesh, rect: r });
+        items.push({ mesh, rect: r, tika });
 
         for (const h2 of style.lights ? hangs(r, i) : []) {
           const bulb = new Mesh(
@@ -1281,33 +1508,61 @@ export function createCaption3D({ reduceMotion }) {
           lamps.push({ bowl, flame, light, x: px3, y: foot + lw * 0.3, lit: false, seed: Math.random() * 10, size: lw });
         }
       }
-      if (style.mala) {
+      if (style.mala || style.bhaitika) {
         // Two long marigold strands, hung at the outer edges of the whole paragraph rather than
         // off every word: they frame the text instead of falling across it. Each hangs as a
         // pendulum and is pushed by the pointer passing through it (see stepStrands).
         const fs = rects[0].height / 1.3;
         const R = fs * 0.27;
-        const leftX = Math.min(...rects.map((r) => r.left)) - R * 1.5;
-        const rightX = Math.max(...rects.map((r) => r.right)) + R * 1.5;
-        const topY2 = Math.min(...rects.map((r) => r.top)) + fs * 0.36; // the shirorekha line
+        // Hung from the ENDS OF THE LAST LINE, both at one level. Off the top line they fall
+        // straight through the lines beneath and lie across the words; off the bottom line they
+        // hang into open frame, which is also how a mala is really hung — from one rail, both
+        // ends level. Each is held a flower's width inside the screen: the canvas is clipped to
+        // the viewport, and a strand hung past that edge is a strand sliced down the middle.
+        const keep = R * 1.8 + 6;
+        const blockL = Math.min(...rects.map((r) => r.left));
+        const blockR = Math.max(...rects.map((r) => r.right));
+        const lastTop = Math.max(...rects.map((r) => r.top));
+        const firstTop = Math.min(...rects.map((r) => r.top));
+        const drop = R * 1.55 * MALA_HEADS;
+        // A mala hangs DOWN, so where it is hung from depends on where the caption sits. High on
+        // the frame there is open screen under the last line, and hanging both ends off that line
+        // keeps the flowers out of the words entirely. Low on the frame there is no room under it
+        // — the strands would be cut off by the bottom of the screen — so they hang instead from
+        // the top line, outside the block on either side, and fall PAST the words.
+        const roomBelow = window.innerHeight - (lastTop + fs * 1.3) > drop * 0.8;
+        const line = roomBelow ? rects.filter((r) => r.top >= lastTop - fs * 0.4) : null;
+        const wantL = roomBelow ? Math.min(...line.map((r) => r.left)) - R * 1.5 : blockL - R * 1.8;
+        const wantR = roomBelow ? Math.max(...line.map((r) => r.right)) + R * 1.5 : blockR + R * 1.8;
+        const leftX = Math.max(keep, wantL);
+        const rightX = Math.min(window.innerWidth - keep, wantR);
+        const topY2 = (roomBelow ? lastTop : firstTop) + fs * 0.36; // the shirorekha they hang on
         const count = MALA_HEADS;
         for (const ax of [leftX, rightX]) {
           const [wx, wy] = toWorld(ax, topY2);
           const heads = [];
           for (let k = 0; k < count; k++) {
+            // s07: the strand is the two flowers of Bhai Tika, alternating — sayapatri, which
+            // goes over in a day, and makhamali, which is the whole reason the story ends well.
+            const papery = style.bhaitika && k % 2 === 1;
             const m = new Mesh(
               new PlaneGeometry(R * 2, R * 2),
               new MeshStandardMaterial({
-                map: marigoldTexture(),
+                map: papery ? makhamaliTexture() : marigoldTexture(),
                 transparent: true,
                 depthWrite: false,
-                roughness: 0.9,
+                roughness: papery ? 0.98 : 0.9, // makhamali is dry paper; it has no sheen to give
                 metalness: 0,
-                color: new Color().setHSL(0.075 + Math.random() * 0.05, 0.95, 0.56 + Math.random() * 0.16),
+                color: papery
+                  ? new Color(MAKHAMALI).offsetHSL(0, 0, (Math.random() - 0.5) * 0.07)
+                  : new Color().setHSL(0.075 + Math.random() * 0.05, 0.95, 0.56 + Math.random() * 0.16),
               })
             );
             m.rotation.z = (Math.random() - 0.5) * 0.7;
-            m.scale.setScalar(0.84 + Math.random() * 0.3);
+            m.scale.setScalar(papery ? 0.66 + Math.random() * 0.16 : 0.84 + Math.random() * 0.3);
+            m.userData.wilts = style.bhaitika && !papery; // only the sayapatri has a day to lose
+            m.userData.base = m.material.color.clone();
+            m.userData.size = m.scale.x;
             m.renderOrder = 4;
             root.add(m);
             heads.push(m);
@@ -1321,6 +1576,7 @@ export function createCaption3D({ reduceMotion }) {
           const step = R * 1.55;
           const pts = [];
           for (let k = 0; k <= count; k++) pts.push({ x: wx, y: wy - k * step, px: wx, py: wy - k * step });
+          const tilt = heads.map(() => (Math.random() - 0.5) * 0.5);
           strands.push({
             x: wx,
             y: wy,
@@ -1329,7 +1585,9 @@ export function createCaption3D({ reduceMotion }) {
             pts,
             step,
             len: step * count,
-            tilt: heads.map(() => (Math.random() - 0.5) * 0.5),
+            tilt,
+            rest: tilt.slice(), // how each head hangs before the sun has been past it
+            side: ax < (blockL + blockR) / 2 ? -1 : 1, // it hangs over away from the words
           });
         }
         placeStrands();
@@ -1409,6 +1667,7 @@ export function createCaption3D({ reduceMotion }) {
       const smoked = style.smoke && !reduceMotion();
       const pecked = style.peck && !reduceMotion();
       const powdered = style.powder && !reduceMotion();
+      const tikaed = style.bhaitika && !reduceMotion();
       if (on) {
         clearTimeout(hideTimer);
         cancelAnimationFrame(peckTimer);
@@ -1418,8 +1677,10 @@ export function createCaption3D({ reduceMotion }) {
           powderUniforms.uScatter.value = 0;
           runPowder(true);
         }
+        if (tikaed) runTika(true);
         if (style.door) openDoor();
         if (style.grain) pourGrain();
+        if (style.bhaitika) runSun();
         canvas.style.display = "block";
         requestAnimationFrame(() => {
           canvas.style.opacity = "1";
@@ -1433,6 +1694,17 @@ export function createCaption3D({ reduceMotion }) {
           canvas.style.display = "none";
           canvas.style.opacity = "0";
         }, POWDER_OUT_MS + 70);
+      } else if (tikaed) {
+        cancelAnimationFrame(sunTimer);
+        sunTimer = 0;
+        cancelAnimationFrame(swingTimer);
+        swingTimer = 0;
+        runTika(false);
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          canvas.style.display = "none";
+          canvas.style.opacity = "0";
+        }, TIKA_OUT_MS + TIKA_OUT_SPREAD + 60);
       } else if (pecked) {
         runPeck();
         clearTimeout(hideTimer);
@@ -1479,8 +1751,10 @@ export function createCaption3D({ reduceMotion }) {
         runPowder(true);
       }
       if (style.peck) peckUniforms.uEaten.value = 0;
+      if (style.bhaitika) runTika(true);
       if (style.door) openDoor();
       if (style.grain) pourGrain();
+      if (style.bhaitika) runSun();
       dirty = true;
     },
 
@@ -1506,6 +1780,8 @@ export function createCaption3D({ reduceMotion }) {
       cancelAnimationFrame(lampTimer);
       cancelAnimationFrame(doorTimer);
       cancelAnimationFrame(grainTimer);
+      cancelAnimationFrame(tikaTimer);
+      cancelAnimationFrame(sunTimer);
       clearTimeout(hideTimer);
       window.removeEventListener("resize", resize);
       clear();

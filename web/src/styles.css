@@ -941,6 +941,25 @@ body.is-entered .diyos {
   background: rgba(242, 163, 58, 0.16);
 }
 
+/* the source link under the finale: a small mark, dim until it is wanted */
+.finale__src {
+  display: inline-flex;
+  margin-top: 22px;
+  padding: 6px;
+  border-radius: 999px;
+  color: var(--cream);
+  opacity: 0.38;
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    color var(--dur-hover) var(--ease-out);
+}
+
+.finale__src:hover,
+.finale__src:focus-visible {
+  opacity: 1;
+  color: var(--marigold);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .finale__line,
   .finale__end {
