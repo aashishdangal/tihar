@@ -1005,35 +1005,41 @@ export function createCaption3D({ reduceMotion }) {
         flame.castShadow = false;
       }
       if (style.gilt) {
-        // Pearls set along the shirorekha, the way they are set in rows around the murti's
-        // halo. The top line of a Devanagari word is already a bar running across it, so the
-        // pearls thread onto something that is really there rather than being sprinkled on.
+        // A few pearls, set in the gaps BETWEEN words rather than strung along every bar: on
+        // the murti they punctuate the gilding, they do not cover it. One every other gap, so
+        // a nine-word line wears four, and none of them sits on a letter.
         const fs5 = rects[0].height / 1.3;
-        const rad = fs5 * 0.072;
-        const geom = new SphereGeometry(rad, 16, 12);
+        const rad = fs5 * 0.1;
+        const geom = new SphereGeometry(rad, 20, 14);
+        const byLine = new Map();
         for (const r of rects) {
-          const shiro = r.top + fs5 * 0.44; // on the shirorekha itself, not above it
-          const gap = rad * 6.2; // set at intervals, like the gems round the halo
-          const n2 = Math.max(1, Math.floor((r.width - rad) / gap));
-          const spare = (r.width - n2 * gap) / 2;
-          for (let k = 0; k < n2; k++) {
-            const [gx, gy] = toWorld(r.left + spare + gap * (k + 0.5), shiro);
+          const line = Math.round(r.top);
+          if (!byLine.has(line)) byLine.set(line, []);
+          byLine.get(line).push(r);
+        }
+        for (const [, row] of byLine) {
+          row.sort((a, b) => a.left - b.left);
+          for (let k = 0; k + 1 < row.length; k += 2) {
+            const gapMid = (row[k].right + row[k + 1].left) / 2;
+            const [gx, gy] = toWorld(gapMid, row[k].top + fs5 * 0.46);
             const pearl = new Mesh(
               geom.clone(),
               new MeshPhysicalMaterial({
                 color: PEARL,
-                emissive: new Color(0x3a1420),
-                emissiveIntensity: 0.5,
-                roughness: 0.16,
+                // a pearl is lit, never lit up: no emissive, a hard clearcoat for the highlight,
+                // and the room to reflect, which is what gives it its depth
+                roughness: 0.22,
                 metalness: 0,
                 clearcoat: 1,
-                clearcoatRoughness: 0.08,
-                iridescence: 0.7,
-                iridescenceIOR: 1.3,
-                envMapIntensity: 1.5,
+                clearcoatRoughness: 0.06,
+                sheen: 0.8,
+                sheenColor: new Color(0xfff0f4),
+                iridescence: 0.35,
+                iridescenceIOR: 1.25,
+                envMapIntensity: 2.2,
               })
             );
-            pearl.position.set(gx, gy, rad * 1.3);
+            pearl.position.set(gx, gy, rad * 1.1);
             pearl.renderOrder = 5;
             root.add(pearl);
             pearls.push(pearl);

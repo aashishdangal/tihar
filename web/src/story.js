@@ -13,6 +13,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FrameSequence } from "./frames.js";
 import { layout } from "./scroll_map.js";
 import { initCaption, initPlaceMode } from "./caption.js";
+import { createFinale } from "./finale.js";
 import { setPlace } from "./audio.js";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -398,17 +399,41 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     requestAnimationFrame(tick);
   }
 
-  // the next placeholder rises from below after the last scene
-  gsap.fromTo(
-    ".story__next .story__soon",
-    { opacity: 0, y: 40 },
-    {
-      opacity: 1,
-      y: 0,
-      ease: "none",
-      scrollTrigger: { trigger: ".story__next", start: "top 80%", end: "top 30%", scrub: true },
-    }
-  );
+  // ---- scene 8: the finale the browser draws itself ----------------------------------------
+  const finaleEl = document.getElementById("s08_finale");
+  const finale = finaleEl && createFinale(finaleEl, { reduceMotion });
+  if (finale) {
+    finale.mount();
+    if (new URLSearchParams(location.search).has("probe")) window.__finale = finale;
+    const lines = [...finaleEl.querySelectorAll(".finale__line")];
+    const end = finaleEl.querySelector(".finale__end");
+    ScrollTrigger.create({
+      trigger: finaleEl,
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate(self) {
+        const p = self.progress;
+        finale.setProgress(p);
+        // each line holds its own stretch of the climb, then gives way to the next
+        lines[0]?.classList.toggle("is-shown", p > 0.1 && p < 0.42);
+        lines[1]?.classList.toggle("is-shown", p > 0.47 && p < 0.78);
+        end?.classList.toggle("is-shown", p > 0.84);
+      },
+      onToggle(self) {
+        // the valley only animates while it is on screen
+        if (self.isActive) finale.play();
+        else finale.pause();
+      },
+    });
+    finaleEl.querySelector("[data-again]")?.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+    });
+    finaleEl.querySelector("[data-credits]")?.addEventListener("click", () => {
+      window.open(`${import.meta.env.BASE_URL}credits.html`, "_blank", "noopener");
+    });
+  }
+
+
 
   // --- keyboard (WEB.md): arrows / Page keys move between pause points ---
   // every scene's start, its beats and its end, then the page end
