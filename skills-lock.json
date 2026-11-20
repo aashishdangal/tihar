@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "ux-sound-design": {
+      "source": "NVlabs/Skill2Env",
+      "commit": "a99ad513b438021ed384c60b0a6bdf650afe0a2a",
+      "sourceType": "github",
+      "skillPath": "SkillHub/skills/ux-sound-design/SKILL.md",
+      "computedHash": "3995df9b9992d1962ed97d171628b47b30bced2788a6572be19f352a548e6a86"
+    }
+  }
+}
