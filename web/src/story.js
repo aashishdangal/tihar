@@ -43,6 +43,11 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   let lastScrollT = 0;
   let lastT = 0;
   let active = null;
+  // true while the browser-drawn finale owns the screen: the frame scenes stop placing the
+  // mix then, so scene 7 and scene 8 do not fight over it every animation frame
+  let finaleOn = false;
+  let finaleP = 0; // its scroll progress, placed from the tick so the scroll wind can fall away
+                   // when you stop scrolling — ScrollTrigger only reports while you move
   let reducedAlpha = 0;
 
   const players = scenes.map((scene, k) => {
@@ -361,7 +366,8 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     }
     p.seq.evict(Math.round(p.cur) - 1);
     p.lo?.evict(Math.round(p.cur) - 1);
-    setPlace(scene.id, p.cur);
+    if (finaleOn) setPlace("s08_finale", finaleP * 100);
+    else setPlace(scene.id, p.cur);
 
     // neighbours: the next scene's opening frames ready near the cut, the previous scene's last
     // frames ready for scrolling back; everything else out of view is freed
@@ -417,6 +423,10 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       onUpdate(self) {
         const p = self.progress;
         finale.setProgress(p);
+        // the finale draws itself rather than playing frames, so its mix is placed by progress:
+        // 0-100 stands in for the frame number that scenes.json "s08_finale" keys its gains to.
+        // The tick does the placing (above) so the mix keeps moving when the scroll stops.
+        finaleP = p;
         // each line holds its own stretch of the climb, then gives way to the next
         lines[0]?.classList.toggle("is-shown", p > 0.1 && p < 0.42);
         lines[1]?.classList.toggle("is-shown", p > 0.47 && p < 0.78);
@@ -424,8 +434,12 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       },
       onToggle(self) {
         // the valley only animates while it is on screen
-        if (self.isActive) finale.play();
-        else finale.pause();
+        finaleOn = self.isActive;
+        if (self.isActive) {
+          finale.play();
+        } else {
+          finale.pause();
+        }
       },
     });
     finaleEl.querySelector("[data-again]")?.addEventListener("click", () => {

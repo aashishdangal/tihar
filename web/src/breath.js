@@ -3,6 +3,8 @@
 // crossfade with a small spring (CSS) and a soft pulse of the ring.
 // Holding is never required: a quick click/tap, Enter/Space, or a screen-reader "activate"
 // plays a full breath automatically. Letting go before BLOW_MIN just lets the breath out.
+// The breath is heard as well as seen (owner-supplied recording, 2026-11-19): it starts with
+// the press and the blow cuts it off, so a long hold and a tap both sound like one breath.
 
 const BREATHE_MS = 1200; // a full breath in
 const AUTO_MS = 520; // the automatic breath for a tap / keyboard / assistive tech
@@ -10,6 +12,8 @@ const DRAIN_MS = 450; // breath let out without blowing
 const TAP_MS = 220; // a press shorter than this is a tap
 const BLOW_MIN = 0.6; // enough breath to blow the diyo out
 const CHEEKS_AT = 0.8; // the boy switches from "arms wide" to "cheeks puffed"
+
+import { playBreath, stopBreath } from "./audio.js";
 
 const easeOut = (x) => 1 - (1 - x) * (1 - x);
 const breathe = (x) => x * x * (3 - 2 * x); // slow start, faster middle, slow finish: ~0.7 s to BLOW_MIN
@@ -66,12 +70,14 @@ export function initBreath(button, { onBlow }) {
     button.classList.remove("is-holding");
     button.classList.add("is-blowing");
     pulse();
+    stopBreath(0.06); // the blow takes over from the breath
     onBlow(p);
   }
 
   function autoBreath() {
     if (done) return;
     button.classList.add("is-holding");
+    playBreath();
     tween(1, AUTO_MS * (1 - p), easeOut, blow);
   }
 
@@ -81,6 +87,7 @@ export function initBreath(button, { onBlow }) {
     pressAt = lastInput = performance.now();
     button.classList.add("is-holding");
     pulse();
+    playBreath();
     tween(1, BREATHE_MS * (1 - p), breathe);
   }
 
@@ -91,13 +98,15 @@ export function initBreath(button, { onBlow }) {
     if (p >= BLOW_MIN) return blow();
     button.classList.remove("is-holding");
     pulse();
-    tween(0, DRAIN_MS * p, easeOut); // not enough breath: let it out
+    stopBreath(0.25); // not enough breath: let it out, and let the sound go with it
+    tween(0, DRAIN_MS * p, easeOut);
   }
 
   function cancel() {
     if (!pressing || done) return;
     pressing = false;
     button.classList.remove("is-holding");
+    stopBreath(0.25);
     tween(0, DRAIN_MS * p, easeOut);
   }
 

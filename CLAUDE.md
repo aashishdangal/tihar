@@ -128,5 +128,6 @@ blender.exe <file.blend> --python scripts/blender_start_mcp.py   # open Blender 
 
 ## Open items
 
-- Submission deadline: **2026-11-18** (told 2026-11-11). Plan scenes and renders around it.
+- Submission deadline: **2026-11-21, 23:59** (moved on 2026-11-19; was 2026-11-18, told
+  2026-11-11). Plan scenes and renders around it.
 - Captions need a native-speaker proofread before launch.
