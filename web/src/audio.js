@@ -186,11 +186,15 @@ function buffer(src) {
   return p;
 }
 
-function play(src, { gain = 1, rate = 1, loop = false, dest = master, offset = null, onStart = null } = {}) {
+function play(src, { gain = 1, rate = 1, loop = false, dest = master, offset = null, onStart = null, late = 0 } = {}) {
   const b = buffers.get(src);
   if (!(b instanceof AudioBuffer)) {
-    // not loaded yet: load, and start a loop when it arrives (a late one-shot is skipped)
+    // not loaded yet: load, and start a loop when it arrives. A one-shot is skipped unless it
+    // may be `late` (ms): a cue still plays if its sound arrives within that time.
+    const t0 = performance.now();
     if (loop) Promise.resolve(buffer(src)).then((bb) => bb && play(src, { gain, rate, loop, dest, offset, onStart }));
+    else if (late > 0)
+      Promise.resolve(buffer(src)).then((bb) => bb && performance.now() - t0 < late && play(src, { gain, rate, dest, offset, onStart }));
     else buffer(src);
     return null;
   }
@@ -275,6 +279,7 @@ function unlock() {
     motionGain.connect(hp).connect(lpf).connect(master);
     Promise.resolve(buffer("wind_loop")).then(() => play("wind_loop", { loop: true, rate: 0.8, dest: motionGain }));
     buffer("breath_in"); // the gate control needs it the moment the first press lands
+    buffer("blow"); // the blow-out cue fires ~60 ms after release: too soon to start loading then
     buffer("fw_burst"); // the finale's bangs fire from the simulation, not from a cue list
     if (current) sceneState(current);
     if (new URLSearchParams(location.search).has("debug")) window.__audio = { ctx, scenesOn, mixes, motion: () => motion };
@@ -336,10 +341,14 @@ export function setPlace(id, frame) {
     g.gain.setTargetAtTime(want, t, 0.08);
   }
 
-  // one-shots: fire when the frame passes `at` moving forward (not on big jumps)
-  if (st.last != null && frame > st.last && frame - st.last < 12) {
+  // one-shots: fire when the frame passes `at` moving forward (not on big jumps). A scene's
+  // first call counts as coming from frame 0 when it lands near the start: the blow-out's first
+  // tick could land past its cue at 1.5, and the blow then never played (owner, 2026-11-21).
+  const last = st.last ?? (frame < 12 ? 0 : null);
+  if (last != null && frame > last && frame - last < 12) {
     for (const cue of st.mix?.cues ?? []) {
-      if (st.last < cue.at && frame >= cue.at) play(cue.src, { gain: cue.gain ?? 1, rate: cue.rate ?? 1, dest: st.gain });
+      if (last < cue.at && frame >= cue.at)
+        play(cue.src, { gain: cue.gain ?? 1, rate: cue.rate ?? 1, dest: st.gain, late: 300 });
     }
   }
   st.last = frame;
