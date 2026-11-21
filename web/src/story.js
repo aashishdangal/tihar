@@ -209,12 +209,18 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
   let pinY = null;
   let pinUntil = 0;
   const arrested = new Map(); // beat -> true while this approach has already been stopped
+  let rewindUntil = 0; // while फेरि हेर्नुहोस् takes the reader back to the start, nothing is arrested
 
   /** page scroll position (px) of a frame inside scene p */
   const scrollOf = (p, f) => p.st.start + p.map.progressAt(f) * (p.st.end - p.st.start);
 
   /** Stop momentum at the first caption it runs into. Returns true if the scroll was pinned. */
   function arrestAtCaption(p, now) {
+    // फेरि हेर्नुहोस् jumps 37 000 px in one frame: that is a replay, not a flick to stop
+    if (now < rewindUntil) {
+      lastY = window.scrollY;
+      return false;
+    }
     const y = window.scrollY;
     const vy = y - lastY;
     lastY = y;
@@ -454,8 +460,18 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
         }
       },
     });
+    // Replay (owner 2026-11-21: it stopped short of scene 1). A smooth scroll up ran the whole
+    // story backwards and the caption arrest read it as a flick and pinned it at the first
+    // caption it met. Now it is a cut: straight to the top, arrests off and cleared, and scene 1
+    // rises out of the stars again as it did the first time.
     finaleEl.querySelector("[data-again]")?.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+      rewindUntil = performance.now() + 600;
+      arrested.clear();
+      pinY = null;
+      snapHeldUntil = 0;
+      window.scrollTo({ top: 0, behavior: "auto" });
+      lastY = 0;
+      playIntro(players[0]);
     });
   }
 
@@ -488,6 +504,20 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     window.scrollTo({ top: to, behavior: reduceMotion() ? "auto" : "smooth" });
   }
 
+  // s01: stars first, then the valley: the opening frames rise out of black by themselves
+  function playIntro(first) {
+    const s = first.scene;
+    if (!s.intro || reduceMotion()) return;
+    if (first.intro) gsap.killTweensOf(first.intro);
+    first.intro = { f: s.intro[0] };
+    gsap.to(first.intro, {
+      f: s.intro[1],
+      duration: ((s.intro[1] - s.intro[0]) / s.fps) * 2,
+      ease: "power1.inOut",
+      onComplete: () => (first.intro = null),
+    });
+  }
+
   window.addEventListener("resize", () => useSet(pickSet()));
 
   return {
@@ -511,17 +541,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
       requestAnimationFrame(tick);
       ScrollTrigger.refresh();
       window.addEventListener("keydown", onKey);
-      // s01: stars first, then the valley: the opening frames rise out of black by themselves
-      const s = first.scene;
-      if (s.intro && !reduceMotion()) {
-        first.intro = { f: s.intro[0] };
-        gsap.to(first.intro, {
-          f: s.intro[1],
-          duration: ((s.intro[1] - s.intro[0]) / s.fps) * 2,
-          ease: "power1.inOut",
-          onComplete: () => (first.intro = null),
-        });
-      }
+      playIntro(first);
       setTimeout(() => {
         if (window.scrollY <= 8) cue.classList.add("is-shown");
       }, reduceMotion() ? 200 : 1600);
