@@ -6,6 +6,12 @@ Entry for the **KUCC Tihar-Chhath Web UI Design Competition**. School project, n
 
 **Live site: https://tihar-katha.pages.dev**
 
+![The enter gate: a clay diyo burning in the dark, the title तिहार and the सुरु control](screenshots/01_enter.jpg)
+
+| Bhai Tika: the thali, filled one item per scroll | Finale: शुभ तिहार over the lit valley |
+| --- | --- |
+| ![The Bhai Tika thali with seven-colour tika, marigold and makhamali garlands, and a diyo](screenshots/02_bhaitika.jpg) | ![The Kathmandu valley at evening lit with Tihar lights, the flag and a kite, शुभ तिहार](screenshots/03_finale.jpg) |
+
 ## How to view it
 
 1. Open the link with **sound on**. On an iPhone, turn the silent switch off: Chrome on
