@@ -15,6 +15,7 @@ import { layout } from "./scroll_map.js";
 import { initCaption, initPlaceMode } from "./caption.js";
 import { createFinale } from "./finale.js";
 import { fireworkBurst, setPlace } from "./audio.js";
+import { initMoons } from "./moons.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,6 +30,7 @@ const SNAP_REACH = 30; // vh: a gesture ending this close to a snap frame settle
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export function initStory({ stage, scenes, pickSet, reduceMotion }) {
+  const setDay = initMoons(document.querySelector(".moons"));
   const story = document.getElementById("story");
   const caption = document.getElementById("caption");
   const captionLight = initCaption(caption, { reduceMotion });
@@ -376,6 +378,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     p.lo?.evict(Math.round(p.cur) - 1);
     if (finaleOn) setPlace("s08_finale", finaleP * 100);
     else setPlace(scene.id, p.cur);
+    setDay(finaleOn ? "s08_finale" : scene.id, p.cur);
 
     // neighbours: the next scene's opening frames ready near the cut, the previous scene's last
     // frames ready for scrolling back; everything else out of view is freed

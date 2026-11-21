@@ -439,7 +439,7 @@ body.is-entered {
   overscroll-behavior-y: none;
 }
 
-/* no browser scrollbar over the film; the diyos and captions show where you are */
+/* no browser scrollbar over the film; the moons and captions show where you are */
 html:has(body.is-entered) {
   scrollbar-width: none;
 }
@@ -480,7 +480,7 @@ html:has(body.is-entered)::-webkit-scrollbar {
 /* ---------- HUD (after entering) ---------- */
 
 .wordmark,
-.diyos,
+.moons,
 .caption,
 .scroll-cue {
   position: fixed;
@@ -499,61 +499,62 @@ html:has(body.is-entered)::-webkit-scrollbar {
   text-shadow: var(--text-shade);
 }
 
-.diyos {
+.moons {
   right: max(24px, env(safe-area-inset-right));
   bottom: max(24px, env(safe-area-inset-bottom));
   display: flex;
+  align-items: center;
   gap: 10px;
   padding: 0;
   list-style: none;
 }
 
-.diyo svg {
+.moon img {
   display: block;
-  width: 26px;
-  height: 23px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  /* nights still to come: there, but asleep */
+  opacity: 0.3;
+  filter: brightness(0.75) saturate(0.6);
+  transition: opacity 600ms, filter 600ms, transform 600ms var(--ease-out);
 }
 
-.diyo__bowl {
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.6;
-  opacity: 0.7;
+.moon.is-lit img {
+  opacity: 0.8;
+  filter: none;
 }
 
-.diyo__flame {
-  fill: var(--marigold);
-  opacity: 0;
-}
-
-.diyo.is-lit .diyo__bowl,
-.diyo.is-active .diyo__bowl {
-  stroke: var(--marigold);
+.moon.is-active img {
   opacity: 1;
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 5px rgba(255, 244, 224, 0.35));
+  animation: moon-glow 3.2s ease-in-out infinite;
 }
 
-.diyo.is-lit .diyo__flame {
-  opacity: 1;
+/* औँसी: no moon in the sky, only earthshine — the night the diyos are lit for, so its glow
+   is marigold */
+.moon--new.is-active img {
+  animation-name: moon-glow-new;
 }
 
-.diyo.is-active .diyo__flame {
-  transform-origin: 16px 12px;
-  animation: diyo-flicker 1.4s ease-in-out infinite;
+@keyframes moon-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255, 244, 224, 0.25)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 244, 224, 0.5)); }
 }
 
-@keyframes diyo-flicker {
-  0%, 100% { opacity: 0.95; transform: scale(1, 1); }
-  40% { opacity: 0.7; transform: scale(0.92, 1.06); }
-  70% { opacity: 1; transform: scale(1.04, 0.95); }
+@keyframes moon-glow-new {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(242, 163, 58, 0.45)); }
+  50% { filter: drop-shadow(0 0 9px rgba(242, 163, 58, 0.8)); }
 }
 
 .js .wordmark,
-.js .diyos {
+.js .moons {
   opacity: 0;
   transition: opacity var(--dur-enter) var(--ease-out) 1.2s;
 }
 body.is-entered .wordmark,
-body.is-entered .diyos {
+body.is-entered .moons {
   opacity: 1;
 }
 
@@ -768,7 +769,7 @@ body.is-entered .diyos {
   .wordmark {
     left: max(16px, env(safe-area-inset-left));
   }
-  .diyos {
+  .moons {
     right: max(16px, env(safe-area-inset-right));
     gap: 6px;
   }
@@ -799,11 +800,11 @@ body.is-entered .diyos {
   .breath__hint,
   .sound,
   .wordmark,
-  .diyos {
+  .moons {
     transition: none;
   }
   .scroll-cue__line::after,
-  .diyo.is-active .diyo__flame {
+  .moon.is-active img {
     animation: none;
   }
   .breath__glow,
@@ -1023,22 +1024,36 @@ body.is-entered .diyos {
   100% { --sheen: 250%; }
 }
 
-/* the GitHub mark sits beside फेरि हेर्नुहोस् as a round button of the same height */
+/* the GitHub link beside फेरि हेर्नुहोस्: the same pill, the mark followed by गिटहब */
 .finale__actions .finale__src {
-  display: inline-grid;
-  place-items: center;
-  /* exactly as tall as फेरि हेर्नुहोस् (its height comes from the flex row), and round */
-  align-self: stretch;
-  height: auto;
-  width: auto;
-  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   margin-top: 0; /* the old standalone mark sat 22 px below, dimmed */
-  opacity: 0.9;
-  padding: 0;
+  opacity: 1;
+  padding: 12px 24px 12px 20px;
   border: 1px solid var(--cream-line);
   border-radius: 999px;
   background: rgba(8, 10, 24, 0.5);
   color: var(--cream);
+  font-weight: 600;
+  font-size: clamp(15px, 1.4vw, 19px);
+  text-decoration: none;
+  transition:
+    background var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out);
+}
+
+.finale__actions .finale__src svg {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+}
+
+.finale__actions .finale__src:hover,
+.finale__actions .finale__src:focus-visible {
+  border-color: var(--marigold);
+  background: rgba(242, 163, 58, 0.16);
 }
 
 .finale__actions {

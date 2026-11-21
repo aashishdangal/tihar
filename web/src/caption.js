@@ -141,7 +141,7 @@ export function initCaption(el, { reduceMotion }) {
   const DEFAULT_AT = [0.5, 0.86];
   let placedKey = null; // which caption is currently placed, so ?place knows what it is editing
 
-  // The HUD owns the two bottom corners — the sound button on the left, the diyo bar on the
+  // The HUD owns the two bottom corners — the sound button on the left, the moon bar on the
   // right — and on a phone the caption is nearly the full width of the screen, so a line placed
   // low lands on top of them. "at" says where the line WANTS to sit; this is how far up it has
   // to come to clear whichever control it actually overlaps. Nothing moves on a wide screen,
@@ -154,7 +154,7 @@ export function initCaption(el, { reduceMotion }) {
     const box = el.getBoundingClientRect();
     if (!box.height) return;
     let ceiling = Infinity;
-    for (const control of [document.getElementById("sound"), document.querySelector(".diyos")]) {
+    for (const control of [document.getElementById("sound"), document.querySelector(".moons")]) {
       if (!control) continue;
       const r = control.getBoundingClientRect();
       if (!r.width || !r.height) continue;
