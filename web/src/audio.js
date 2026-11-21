@@ -273,7 +273,8 @@ function unlock() {
     if (current) sceneState(current);
     if (new URLSearchParams(location.search).has("debug")) window.__audio = { ctx, scenesOn, mixes, motion: () => motion };
   }
-  if (ctx.state === "suspended" && isSoundOn()) ctx.resume();
+  // "interrupted" is iOS after a call or a trip to another app
+  if (ctx.state !== "running" && ctx.state !== "closed" && isSoundOn()) ctx.resume().catch(() => {});
 }
 
 /** Called every animation frame with the scene on screen and its (fractional) frame. */
@@ -391,10 +392,24 @@ export function stopBreath(fadeS = 0.12) {
 }
 
 export function initAudio() {
+  // Phones were silent (owner, 2026-11-21). On touch, a press going *down* is not a gesture that
+  // may start audio: Chrome and Safari only count the finger lifting (touchend / pointerup /
+  // click). The mouse press still counts, so desktops always worked. Listen to both ends.
   const go = () => unlock();
-  window.addEventListener("pointerdown", go, { passive: true });
-  window.addEventListener("keydown", go);
-  window.addEventListener("touchstart", go, { passive: true });
+  for (const ev of ["pointerdown", "pointerup", "touchstart", "touchend", "click", "keydown"]) {
+    window.addEventListener(ev, go, { passive: true, capture: true });
+  }
+  // iPhone: with the ring/silent switch on silent, web audio is muted unless the page says it is
+  // media playback (Safari 16.4+; ignored elsewhere).
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+  } catch {
+    /* not supported */
+  }
+  // back from another app or the lock screen: the phone suspended the context; wake it
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && ctx) unlock();
+  });
   window.addEventListener("tihar:sound", (e) => {
     if (!ctx) return;
     const on = e.detail.on;
