@@ -1,4 +1,4 @@
-"""PNG -> WebP for one scene (see PIPELINE.md section 3).
+"""PNG -> WebP for one scene (see docs/PIPELINE.md section 3).
 
 renders/<scene>/0001.png -> web/public/frames/<scene>/d/0001.webp  (1920x1080, q100 sharp_yuv)
                          -> web/public/frames/<scene>/m/0001.webp  (720x1280,  q100 sharp_yuv)

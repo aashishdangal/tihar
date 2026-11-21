@@ -39,7 +39,7 @@ low-end laptops).
 | 8 | शुभ तिहार | A golden burst into the evening valley from the hill, the flag and a kite, शुभ तिहार in sparks |
 
 Day 1 (Kaag Tihar) is part of scene 2, so there is no separate scene 3. The full scene
-spec is in [`SCENES.md`](SCENES.md).
+spec is in [`docs/SCENES.md`](docs/SCENES.md).
 
 ## How it works
 
@@ -114,21 +114,21 @@ web/            the website (index.html, src/, public/frames, public/audio)
 scripts/        Blender, render, encode and audio scripts
 blender/        scene .blend files (Git LFS); downloaded assets are not committed
 renders/        raw rendered frames (not committed)
-*.md            specs: SCENES, ASSETS, PIPELINE, WEB, CREDITS
+docs/           specs: SCENES, ASSETS, PIPELINE, WEB, CREDITS, scene plans
 ```
 
 ## Documentation
 
-- Story, scenes, captions, camera: [`SCENES.md`](SCENES.md)
-- Assets and licences: [`ASSETS.md`](ASSETS.md), [`CREDITS.md`](CREDITS.md)
-- Render pipeline: [`PIPELINE.md`](PIPELINE.md)
-- Website: [`WEB.md`](WEB.md)
+- Story, scenes, captions, camera: [`docs/SCENES.md`](docs/SCENES.md)
+- Assets and licences: [`docs/ASSETS.md`](docs/ASSETS.md), [`docs/CREDITS.md`](docs/CREDITS.md)
+- Render pipeline: [`docs/PIPELINE.md`](docs/PIPELINE.md)
+- Website: [`docs/WEB.md`](docs/WEB.md)
 - Project rules: [`CLAUDE.md`](CLAUDE.md)
 
 ## Credits
 
 Only free assets are used (CC0, CC BY, or explicitly free licences). Every model, texture,
-HDRI and sound is listed with its author and licence in [`CREDITS.md`](CREDITS.md).
+HDRI and sound is listed with its author and licence in [`docs/CREDITS.md`](docs/CREDITS.md).
 
 The story follows one folk retelling of Bhai Tika; another account tells of Yamaraj
 visiting his sister Yamuna.

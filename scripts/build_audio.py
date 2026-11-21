@@ -2,7 +2,7 @@
 
 Cuts one-shots, makes seamless loops (tail crossfaded into the head), evens the loudness and
 encodes small mono MP3s into web/public/audio/. The mix (who plays when, how loud) lives in
-web/src/audio.js. Credits for every source: CREDITS.md.
+web/src/audio.js. Credits for every source: docs/CREDITS.md.
 
 Run (repo root): python scripts/build_audio.py
 """
