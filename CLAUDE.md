@@ -74,7 +74,8 @@ The agent never edits the .blend or runs Blender itself.
 
 ## Git / GitHub
 
-- Repo: https://github.com/aashishdangal/tihar (private).
+- Repo: https://github.com/aashishdangal/tihar-katha (public since 2026-11-21; renamed from tihar).
+- Live site: https://tihar-katha.pages.dev (Cloudflare Pages; deploy steps in README.md).
 - **Claude must never appear as a contributor.** No `Co-Authored-By: Claude` lines,
   no "Generated with Claude Code" footers in commits, PRs or issues. Commits are
   authored by the user only.
