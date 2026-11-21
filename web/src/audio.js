@@ -279,6 +279,19 @@ function unlock() {
     if (current) sceneState(current);
     if (new URLSearchParams(location.search).has("debug")) window.__audio = { ctx, scenesOn, mixes, motion: () => motion };
   }
+  // iPhone (WebKit, so Chrome on iPhone too) only lets the audio out once a sound has been
+  // *started* inside a gesture; resume() alone can leave it silent. Start one silent sample on
+  // every gesture until the context runs (owner, 2026-11-21: scene 0 silent on iPhone Chrome).
+  if (ctx.state !== "running") {
+    try {
+      const s = ctx.createBufferSource();
+      s.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      s.connect(ctx.destination);
+      s.start(0);
+    } catch {
+      /* nothing to do */
+    }
+  }
   // "interrupted" is iOS after a call or a trip to another app
   // ask again on every gesture: a resume() from a finger going down is not allowed and may
   // never settle, so only the one from the finger lifting starts the sound
@@ -409,7 +422,11 @@ export function initAudio() {
   // Phones were silent (owner, 2026-11-21). On touch, a press going *down* is not a gesture that
   // may start audio: Chrome and Safari only count the finger lifting (touchend / pointerup /
   // click). The mouse press still counts, so desktops always worked. Listen to both ends.
-  const go = () => unlock();
+  const dbg = new URLSearchParams(location.search).has("debug") ? debugPanel() : null;
+  const go = (e) => {
+    unlock();
+    dbg?.(e.type);
+  };
   for (const ev of ["pointerdown", "pointerup", "touchstart", "touchend", "click", "keydown"]) {
     window.addEventListener(ev, go, { passive: true, capture: true });
   }
@@ -430,4 +447,28 @@ export function initAudio() {
     master.gain.setTargetAtTime(on ? MASTER : 0, ctx.currentTime, 0.15);
     if (on && ctx.state === "suspended") ctx.resume();
   });
+}
+
+// ?debug on a phone: a small readout of what the audio is doing, since a phone has no console.
+function debugPanel() {
+  const el = document.createElement("pre");
+  el.style.cssText =
+    "position:fixed;left:4px;top:4px;z-index:99999;margin:0;padding:6px;max-width:92vw;font:11px/1.3 monospace;" +
+    "color:#0f0;background:rgba(0,0,0,.75);pointer-events:none;white-space:pre-wrap";
+  document.addEventListener("DOMContentLoaded", () => document.body.appendChild(el));
+  if (document.body) document.body.appendChild(el);
+  const log = [];
+  const show = () => {
+    el.textContent =
+      `ctx: ${ctx ? ctx.state : "none"}  t=${ctx ? ctx.currentTime.toFixed(2) : "-"}  sound:${isSoundOn()}\n` +
+      `session: ${navigator.audioSession?.type ?? "n/a"}  scene: ${current ?? "-"}  resuming:${resuming}\n` +
+      log.slice(-8).join("\n");
+  };
+  setInterval(show, 250);
+  return (type) => {
+    const t = (performance.now() / 1000).toFixed(1);
+    if (log.length && log[log.length - 1].startsWith(type)) return;
+    log.push(`${type} @${t}s -> ${ctx ? ctx.state : "none"}`);
+    show();
+  };
 }
