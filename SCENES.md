@@ -142,12 +142,14 @@ click/tap/key unlocks audio. A source whose file is missing is skipped, never an
   lane and kausi by `city_night` and the dawn birds, s04's closing doorway by the village
   morning falling away, s05's goth by the dawn bed.
 
-- s07: warm room tone, the lamp flutter rising to 0.18, dawn at the end. **A real brass ghanta**
-  at 54, 210 and 244 (owner, 2026-11-19), replacing Bell-ring.flac: 3.4 kHz against its 7.3 kHz
-  and a 5 s ring-out against 2.6 s. The tail is what separates a puja bell from a ping, so the
-  strike's tail is kept whole.
-- s08 finale: **fireworks only, no Deusi** (owner, 2026-11-19). `fw_far_loop` and five
-  `fw_burst`es, both low-passed hard — across a valley only the thud arrives — over the wind that
-  opened the site. The finale is drawn by the browser rather than played as frames, so its mix is
+- s07 (owner, 2026-11-20): a real Nagarkot morning heard through the jhyal (`window_morning`)
+  under the lamp flutter, and a bright high tap (`place`) as each item lands on the thali —
+  frames 60, 84, 113, 137, 161, 185. **No ghanta, no dawn_loop, no singing-bowl drone** here
+  any more. s02's kausi morning is now a real Kathmandu recording (`ktm_morning`).
+- s08 finale: **fireworks only, no Deusi** (owner, 2026-11-19). Since 2026-11-20 every bang is
+  **synced to a burst on screen**: `finale.js` calls `fireworkBurst()` in `audio.js` the moment a
+  shell bursts, panned to where it burst, deeper and louder for the big opening shell, max 7 at
+  once. The scroll-keyed cues and `fw_far_loop` (bangs with nothing on screen) are gone; the
+  wind that opened the site stays. The finale is drawn by the browser rather than played as frames, so its mix is
   placed by scroll progress (0-100 standing in for the frame number) from `web/src/story.js`;
   while it is on screen the frame scenes stop placing the mix so the two do not fight.

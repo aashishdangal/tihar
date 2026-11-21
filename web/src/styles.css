@@ -725,9 +725,9 @@ body.is-entered .diyos {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 22px; /* owner 2026-11-21: bigger (was 15 px) */
   color: var(--muted);
   opacity: 0;
   transform: translateX(-50%);
@@ -741,8 +741,9 @@ body.is-entered .diyos {
 
 .scroll-cue__line {
   position: relative;
-  width: 1px;
-  height: 44px;
+  width: 3px; /* owner 2026-11-21: the bar bigger (was 1 x 44 px) */
+  height: 76px;
+  border-radius: 2px;
   overflow: hidden;
   background: var(--cream-line);
 }
@@ -752,8 +753,9 @@ body.is-entered .diyos {
   position: absolute;
   left: 0;
   top: -40%;
-  width: 1px;
+  width: 3px;
   height: 40%;
+  border-radius: 2px;
   background: var(--marigold);
   animation: cue-drop 1.8s ease-in-out infinite;
 }
@@ -833,16 +835,71 @@ body.is-entered .diyos {
   background: var(--void);
 }
 
-/* the scene opens tight on the burst and pulls back off it; finale.js drives the scale */
+/* the scene opens out of focus and racks into focus (finale.js drives the blur); the zoom-out it
+   used to open with was dropped by the owner on 2026-11-21 */
 .finale__still {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(2.1);
-  transform-origin: 50% 38%; /* the point the first shell bursts over */
-  will-change: transform;
+  filter: blur(18px) brightness(1.15);
+  will-change: filter;
+}
+
+/* the hilltop's FRONT layer (hill, flag, kite, tree, grass), above the fireworks; same cover fit and
+   the same focus pull as the still behind it (finaleBackdrop.js) */
+.finale__fore {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  filter: blur(18px) brightness(1.15);
+  will-change: filter;
+}
+
+/* the black the gold goes to before the valley fades in (finale.js drives its opacity) */
+.finale__veil {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  z-index: 1;
+  will-change: opacity;
+}
+
+/* the rendered gold firework that scene 7's gold turns into: black background, so it is ADDED as
+   light over the black veil and the valley (finale.js swaps its frames with the scroll) */
+.finale__burst {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: plus-lighter;
+}
+
+/* while the finale slides in over scene 7 its panel is invisible (story.js toggles .is-live when
+   it pins), so no edge of it crosses scene 7's gold frame */
+.finale:not(.is-live) .finale__stage {
+  visibility: hidden;
+}
+
+/* the hidden cut: scene 7's golden last frame, over everything; it crossfades into the burst's
+   matching gold frame as the scroll begins */
+.finale__glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+  will-change: opacity;
 }
 
 /* and the fireworks are drawn over it */

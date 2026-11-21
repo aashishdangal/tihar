@@ -373,7 +373,7 @@
           ]
         },
         {
-          "src": "dawn_loop",
+          "src": "ktm_morning",
           "gain": [
             [
               92,
@@ -946,86 +946,46 @@
       ]
     },
     "sound": {
+      "fadeIn": 1.6,
+      "fadeOut": 2.4,
       "beds": [
         {
-          "src": "flame_loop",
+          "src": "deusi_loop",
+          "restart": true,
           "gain": [
             [
               1,
-              0.12
+              0.55
+            ],
+            [
+              12,
+              0.8
             ],
             [
               72,
-              0.16
+              0.8
             ]
           ]
         },
         {
-          "src": "madal_loop",
+          "src": "cheer_loop",
           "gain": [
             [
               1,
-              0.22
+              0.05
             ],
             [
               24,
-              0.4
-            ],
-            [
-              56,
-              0.42
+              0.09
             ],
             [
               72,
-              0.34
-            ]
-          ]
-        },
-        {
-          "src": "clap_loop",
-          "gain": [
-            [
-              1,
-              0.12
-            ],
-            [
-              24,
-              0.26
-            ],
-            [
-              56,
-              0.28
-            ],
-            [
-              72,
-              0.2
+              0.09
             ]
           ]
         }
       ],
-      "cues": [
-        {
-          "src": "coin",
-          "at": 44,
-          "gain": 0.4
-        },
-        {
-          "src": "coin2",
-          "at": 48,
-          "gain": 0.34
-        },
-        {
-          "src": "coin",
-          "at": 52,
-          "gain": 0.3,
-          "rate": 0.94
-        },
-        {
-          "src": "petals",
-          "at": 56,
-          "gain": 0.45
-        }
-      ],
+      "cues": [],
       "motion": 0
     },
     "xfadeIn": 14
@@ -1105,23 +1065,23 @@
     "sound": {
       "beds": [
         {
-          "src": "room_drone",
+          "src": "window_morning",
           "gain": [
             [
               1,
-              0.22
+              0.16
             ],
             [
               204,
-              0.22
+              0.2
             ],
             [
               232,
-              0.14
+              0.26
             ],
             [
               272,
-              0.08
+              0.3
             ]
           ]
         },
@@ -1145,40 +1105,44 @@
               0.18
             ]
           ]
-        },
-        {
-          "src": "dawn_loop",
-          "gain": [
-            [
-              180,
-              0
-            ],
-            [
-              232,
-              0.22
-            ],
-            [
-              272,
-              0.32
-            ]
-          ]
         }
       ],
       "cues": [
         {
-          "src": "ghanta",
-          "at": 54,
-          "gain": 0.26
+          "src": "place",
+          "at": 60,
+          "gain": 0.3,
+          "rate": 1.0
         },
         {
-          "src": "ghanta",
-          "at": 210,
-          "gain": 0.34
+          "src": "place",
+          "at": 84,
+          "gain": 0.28,
+          "rate": 1.07
         },
         {
-          "src": "ghanta",
-          "at": 244,
-          "gain": 0.3
+          "src": "place",
+          "at": 113,
+          "gain": 0.32,
+          "rate": 0.95
+        },
+        {
+          "src": "place",
+          "at": 137,
+          "gain": 0.3,
+          "rate": 1.12
+        },
+        {
+          "src": "place",
+          "at": 161,
+          "gain": 0.3,
+          "rate": 1.03
+        },
+        {
+          "src": "place",
+          "at": 185,
+          "gain": 0.28,
+          "rate": 0.98
         }
       ],
       "motion": 0
@@ -1189,32 +1153,8 @@
     "id": "s08_finale",
     "label": "समापन",
     "sound": {
+      "fadeIn": 0.12,
       "beds": [
-        {
-          "src": "fw_far_loop",
-          "gain": [
-            [
-              0,
-              0
-            ],
-            [
-              12,
-              0.22
-            ],
-            [
-              55,
-              0.4
-            ],
-            [
-              88,
-              0.34
-            ],
-            [
-              100,
-              0.12
-            ]
-          ]
-        },
         {
           "src": "wind_loop",
           "gain": [
@@ -1237,37 +1177,7 @@
           ]
         }
       ],
-      "cues": [
-        {
-          "src": "fw_burst",
-          "at": 18,
-          "gain": 0.5
-        },
-        {
-          "src": "fw_burst",
-          "at": 37,
-          "gain": 0.62,
-          "rate": 0.94
-        },
-        {
-          "src": "fw_burst",
-          "at": 52,
-          "gain": 0.45,
-          "rate": 1.08
-        },
-        {
-          "src": "fw_burst",
-          "at": 69,
-          "gain": 0.58,
-          "rate": 0.9
-        },
-        {
-          "src": "fw_burst",
-          "at": 84,
-          "gain": 0.4,
-          "rate": 1.04
-        }
-      ],
+      "cues": [],
       "motion": 0.22
     }
   }

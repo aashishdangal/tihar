@@ -14,7 +14,7 @@ import { FrameSequence } from "./frames.js";
 import { layout } from "./scroll_map.js";
 import { initCaption, initPlaceMode } from "./caption.js";
 import { createFinale } from "./finale.js";
-import { setPlace } from "./audio.js";
+import { fireworkBurst, setPlace } from "./audio.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -319,6 +319,14 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     const dt = lastT ? Math.min(0.1, (now - lastT) / 1000) : 1 / 60;
     const prevTickT = lastT;
     lastT = now;
+    // the finale's panel shows only once its section has really reached the top of the screen;
+    // while it slides in over scene 7 it stays hidden, so s07's own gold last frame is all you see
+    // (owner 2026-11-21: "a line separating from 2nd last to last"). Measured every frame rather
+    // than taken from the ScrollTrigger, whose start can be stale if the layout moved after load.
+    if (finaleEl) {
+      const fr = finaleEl.getBoundingClientRect();
+      finaleEl.classList.toggle("is-live", fr.top <= 0.5 && fr.bottom > 0);
+    }
     activate(inView());
     const p = active;
     const { scene, map } = p;
@@ -410,7 +418,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
 
   // ---- scene 8: the finale the browser draws itself ----------------------------------------
   const finaleEl = document.getElementById("s08_finale");
-  const finale = finaleEl && createFinale(finaleEl, { reduceMotion });
+  const finale = finaleEl && createFinale(finaleEl, { reduceMotion, onBurst: fireworkBurst });
   if (finale) {
     finale.mount();
     if (new URLSearchParams(location.search).has("probe")) window.__finale = finale;

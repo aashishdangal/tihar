@@ -536,5 +536,71 @@ def main():
         save(level(loop(v[int(a * SR):int((a + 42) * SR)], 3.0), -25), "village_morning")
 
 
+DEUSI_SRC = "deusi_owner.mp3"            # owner's own recording (2026-11-20), used from 0:20
+CLAP_SRC = "freesound_488472_ienba.mp3"   # IENBA, "Small crowd reactions", CC0
+CHEER_SRC = "freesound_512261_asvid123.mp3"  # asvid123, village group cheering, CC0
+
+
+def build_deusi():
+    """s06 Deusi (owner, 2026-11-20): every other s06 sound is dropped for these two.
+    deusi_loop: the owner's recording from 0:20, two minutes, looped. The scene starts it from its
+    first sample each time you arrive (audio.js `restart`), so you always hear it from 0:20.
+    cheer_loop: real clapping and cheering, mixed far below the singing."""
+    if have(DEUSI_SRC):
+        d = load(DEUSI_SRC)
+        s0, n = int(20.0 * SR), int(3.0 * SR)
+        x = d[s0:s0 + int(120.0 * SR)].copy()            # 0:20 → 2:20, head untouched
+        # the last 3 s fade into the 3 s that lead up to 0:20 in the recording, so the wrap
+        # back to the head continues the performance instead of jumping
+        t = np.linspace(0, np.pi / 2, n)
+        x[-n:] = x[-n:] * np.cos(t) + d[s0 - n:s0] * np.sin(t)
+        save(level(x, -20), "deusi_loop", 80)
+    if have(CLAP_SRC):
+        c = load(CLAP_SRC)
+        # the two applause takes (rhythmic → cheering): 13.4-26.8 s and 28.4-40.3 s
+        a, b = c[int(13.4 * SR):int(26.8 * SR)], c[int(28.4 * SR):int(40.3 * SR)]
+        n = int(0.8 * SR)
+        t = np.linspace(0, np.pi / 2, n)
+        mix = np.concatenate([a[:-n], a[-n:] * np.cos(t) + b[:n] * np.sin(t), b[n:]])
+        if have(CHEER_SRC):                                # a group shout landing in the middle
+            ch = fade(load(CHEER_SRC), 0.05, 0.6) * 0.6
+            at = int(len(mix) * 0.45)
+            k = min(len(ch), len(mix) - at)
+            mix[at:at + k] += ch[:k]
+        save(level(loop(mix.astype(np.float32), 1.5), -24), "cheer_loop", 64)
+
+
+KTM_MORNING_SRC = "freesound_818472_soundandmelodies.mp3"  # Satungal, Kathmandu, 4:46 am, CC0
+NAGARKOT_SRC = "freesound_731232_soundandmelodies.mp3"     # forest near Nagarkot, early, CC0
+PLACE_SRC = "freesound_353105_milpower.mp3"                # glass object set on glass plate, CC0
+
+
+def build_mornings():
+    """Owner, 2026-11-20.
+    ktm_morning: Kaag Tihar's kausi morning in s02 (replaces the South Indian dawn_loop there):
+      a real Kathmandu morning — rooster, crows, birds, a few people and a bike going by.
+    window_morning: s07's room tone (replaces the pitched singing bowl): the Nagarkot morning,
+      low-passed as if heard through the jhyal of a closed room.
+    place: s07, an item set down on the thali — bright and short, not a thud."""
+    if have(KTM_MORNING_SRC):
+        k = load(KTM_MORNING_SRC)
+        save(level(loop(hp(k, 90), 3.0), -24), "ktm_morning")
+    if have(NAGARKOT_SRC):
+        g = load(NAGARKOT_SRC)
+        a = steady(g, 40.0)
+        save(level(loop(lp(hp(g[int(a * SR):int((a + 43) * SR)], 120), 2400), 3.0), -26), "window_morning")
+    if have(PLACE_SRC):
+        p = load(PLACE_SRC)
+        e = env(p, 0.005)
+        on = int(np.argmax(e > 0.2 * e.max()))
+        x = p[max(0, on - int(0.004 * SR)):on + int(0.32 * SR)]
+        save(level(fade(hp(x, 1400), 0.002, 0.18), -22, -3), "place", 80)
+
+
 if __name__ == "__main__":
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    if "deusi" in sys.argv[1:]:
+        sys.exit(build_deusi())
+    if "mornings" in sys.argv[1:]:
+        sys.exit(build_mornings())
     sys.exit(main())

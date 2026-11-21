@@ -1,27 +1,27 @@
 // The सुरु "breath" control: press and hold and the boy's face breathes in (head back, then
 // cheeks puffed; the ring fills), let go and he blows the diyo out. Each face change is a
 // crossfade with a small spring (CSS) and a soft pulse of the ring.
-// Holding is never required: a quick click/tap, Enter/Space, or a screen-reader "activate"
-// plays a full breath automatically. Letting go before BLOW_MIN just lets the breath out.
+// Mouse, touch and keyboard must HOLD until the ring is full (owner 2026-11-21: "when click suru and
+// leave it should not start, it should hold until the bar fills"): letting go before that just lets
+// the breath out. Only a screen-reader / switch "activate" (a click with no press before it, so it
+// cannot be held) plays a full breath automatically.
 // The breath is heard as well as seen (owner-supplied recording, 2026-11-19): it starts with
 // the press and the blow cuts it off, so a long hold and a tap both sound like one breath.
 
 const BREATHE_MS = 1200; // a full breath in
 const AUTO_MS = 520; // the automatic breath for a tap / keyboard / assistive tech
 const DRAIN_MS = 450; // breath let out without blowing
-const TAP_MS = 220; // a press shorter than this is a tap
-const BLOW_MIN = 0.6; // enough breath to blow the diyo out
+const BLOW_MIN = 0.999; // the ring must be full to blow the diyo out (was 0.6, and a tap auto-breathed)
 const CHEEKS_AT = 0.8; // the boy switches from "arms wide" to "cheeks puffed"
 
 import { playBreath, stopBreath } from "./audio.js";
 
 const easeOut = (x) => 1 - (1 - x) * (1 - x);
-const breathe = (x) => x * x * (3 - 2 * x); // slow start, faster middle, slow finish: ~0.7 s to BLOW_MIN
+const breathe = (x) => x * x * (3 - 2 * x); // slow start, faster middle, slow finish: BREATHE_MS (1.2 s) to a full ring
 
 export function initBreath(button, { onBlow }) {
   let p = 0; // breath 0..1, drawn on the button as --p
   let raf = 0;
-  let pressAt = 0;
   let pressing = false;
   let done = false;
   let lastInput = 0; // time of the last pointer/key press (to ignore the follow-up click)
@@ -84,7 +84,7 @@ export function initBreath(button, { onBlow }) {
   function press() {
     if (done || pressing) return;
     pressing = true;
-    pressAt = lastInput = performance.now();
+    lastInput = performance.now();
     button.classList.add("is-holding");
     pulse();
     playBreath();
@@ -92,9 +92,9 @@ export function initBreath(button, { onBlow }) {
   }
 
   function release() {
+    lastInput = performance.now(); // the click that follows a long hold is not an assistive "activate"
     if (!pressing || done) return;
     pressing = false;
-    if (performance.now() - pressAt < TAP_MS) return autoBreath();
     if (p >= BLOW_MIN) return blow();
     button.classList.remove("is-holding");
     pulse();

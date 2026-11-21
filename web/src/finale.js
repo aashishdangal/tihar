@@ -1,16 +1,14 @@
-// Scene 8 — the finale. One still from scene 1, and fireworks over it.
-//
-// There is no render for this scene, so rather than invent a valley it stands on a frame we
-// already have: s01 at its locked hold, the whole of Kathmandu lit, before the cloud arrives.
-// That still is the backdrop (CSS, so it costs nothing to draw), and WebGL does only the
-// fireworks — the one thing the rendered frames cannot do, because they were rendered before
-// this scene existed.
+// Scene 8 — the finale. The hilltop view rendered in Blender, brought to life in the browser
+// (finaleBackdrop.js: clean still, flag loop, swaying tree, kite and grass), and fireworks over it.
+// The s01 still in index.html (s01 at its locked hold) is only the fallback until the backdrop's
+// textures have loaded, or if they fail to.
 //
 // The fireworks are a single Points cloud with a fixed pool, simulated in screen space under an
 // orthographic camera of one unit per pixel: "a third of the way up the sky" then means exactly
 // that, whatever the window. One geometry, one draw call, no textures, and the pool is reused
 // rather than reallocated.
 
+import { createBackdrop } from "./finaleBackdrop.js";
 import {
   AdditiveBlending,
   BufferAttribute,
@@ -29,15 +27,54 @@ const GRAVITY = 185; // px/s^2, gentle: a firework hangs longer than it falls
 const DRAG_K = 0.8; // air resistance PER SECOND. Applied per frame, as it was at first, a
                     // spark lost 99.99% of its speed in a second and the burst never opened.
 const LIFE = [1.5, 2.6];
-const ZOOM_FROM = 2.1; // how close the scene opens on the first shell
+// entry: a focus pull (owner 2026-11-21: "i dont like zoom transition" -> chose focus pull). The
+// valley opens as soft bokeh and racks into sharp focus over the first part of the scroll.
+const FOCUS_END = 0.4; // section progress at which the valley is sharp
+const BLUR_MAX = 18; // px of blur at the start, at a 1920 px wide stage
+// the way in from scene 7 (owner 2026-11-21): s07 ends on a full-frame gold glow; a firework rendered
+// in Blender (scripts/s08_burst.py) starts on that same gold (its frame 3 is within ~8 levels of it),
+// bursts into sparks over black, and the out-of-focus valley fades in under the falling sparks
+const GLOW_END = 0.02; // s07's gold frame has crossfaded into the burst
+const BURST_END = 0.13; // the burst has played its frames (scroll-driven, so it also runs back)
+const BURST_FIRST = 3; // burst frame that matches s07's gold
+const VALLEY_IN = [0.05, 0.16]; // the black under the burst lifts off the valley
 
 // gold, as the owner asked: the range a real shell burns through, from white-hot at the centre
 // to amber at the edge, with one warmer ember tone among them
 const SPARK_HUES = [0xffd27a, 0xfff6d8, 0xffb347, 0xffc861, 0xff9a2e, 0xffe9a8];
 
-export function createFinale(section, { reduceMotion }) {
+export function createFinale(section, { reduceMotion, onBurst = null }) {
   const stage = section.querySelector("[data-stage]") ?? section;
   const still = section.querySelector("[data-still]");
+
+  // the hilltop view: clean still + flag loop + swaying tree, kite and grass (finaleBackdrop.js)
+  const backdrop = createBackdrop(stage, still);
+
+  // the hidden cut from scene 7 (owner 2026-11-21: "the 2nd last scene ends in golden ... make it
+  // seamless"): s07 ends on a full-frame warm gold glow, so scene 8 opens on that exact frame, laid
+  // over everything, and lets it fade as the out-of-focus valley appears behind it
+  const glow = document.createElement("img");
+  glow.className = "finale__glow";
+  glow.alt = "";
+  glow.setAttribute("aria-hidden", "true");
+  glow.src = `/frames/s07_bhaitika/${window.innerWidth / window.innerHeight <= 1 ? "m" : "d"}/0272.webp`;
+  const veil = document.createElement("div"); // the black between the gold and the valley
+  veil.className = "finale__veil";
+  veil.setAttribute("aria-hidden", "true");
+  // the rendered burst, ADDED as light over the black and the valley (CSS plus-lighter)
+  const burstEl = document.createElement("img");
+  burstEl.className = "finale__burst";
+  burstEl.alt = "";
+  burstEl.setAttribute("aria-hidden", "true");
+  const burstFrames = [];
+  for (let i = 1; i <= 36; i++) {
+    const im = new Image();
+    im.src = `/frames/s08_finale/hybrid/burst/${String(i).padStart(4, "0")}.webp`;
+    burstFrames.push(im);
+  }
+  let burstShown = -1;
+  burstEl.src = burstFrames[BURST_FIRST - 1].src;
+
   const canvas = document.createElement("canvas");
   canvas.className = "finale__canvas";
   canvas.setAttribute("aria-hidden", "true");
@@ -112,7 +149,6 @@ export function createFinale(section, { reduceMotion }) {
   let last = 0;
   let progress = 0;
   let nextShell = 0;
-  let opened = false;
   const tint = new Color();
 
   function resize() {
@@ -164,6 +200,8 @@ export function createFinale(section, { reduceMotion }) {
   /** Burst a shell into sparks, all of one colour, as a real shell is. */
   function burst(x, y, hex, count = SHELL, grand = 1) {
     const speed = (300 + Math.random() * 330) * grand;
+    // the bang, on the same frame as the flash (audio.js fireworkBurst)
+    onBurst?.({ pan: (x / W) * 2 - 1, size: grand });
     for (let k = 0; k < count; k++) {
       const i = take();
       kind[i] = 2;
@@ -216,7 +254,11 @@ export function createFinale(section, { reduceMotion }) {
     if (!running) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    nextShell -= dt;
+    backdrop.tick(dt);
+    // no other firework until the rendered opening burst has finished (owner 2026-11-21: "other
+    // firework should only start after our main transition firework finishes")
+    if (progress < BURST_END) nextShell = 0.35;
+    else nextShell -= dt;
     if (nextShell <= 0) {
       launch();
       if (progress > 0.55 && Math.random() < 0.45) launch(); // the sky fills toward the end
@@ -231,8 +273,11 @@ export function createFinale(section, { reduceMotion }) {
     canvas,
     mount() {
       stage.append(canvas);
+      stage.append(backdrop.canvas); // hill, flag, kite, tree, grass: in FRONT of the fireworks
+      stage.append(veil, burstEl, glow); // above the fireworks too: s07's last frame has none
       resize();
       window.addEventListener("resize", resize);
+      backdrop.load();
       renderer.render(scene, camera);
     },
 
@@ -243,6 +288,11 @@ export function createFinale(section, { reduceMotion }) {
 
 
 
+    /** ?probe: the hilltop backdrop (loop phase, snapshots) */
+    get backdrop() {
+      return backdrop;
+    },
+
     /** ?probe: what the sky is doing */
     get stats() {
       let alive = 0;
@@ -250,26 +300,40 @@ export function createFinale(section, { reduceMotion }) {
       return { alive, running, bound: geometry.attributes.position.array === pos, W, H };
     },
 
-    /** 0..1 through the section: the rate of fire, and the pull-back off the first burst */
+    /** 0..1 through the section: the rate of fire, and the focus pull onto the valley */
     setProgress(p) {
       progress = Math.min(1, Math.max(0, p));
-      if (still) {
-        // the scene starts close on the burst and draws back to the whole valley
-        const e = progress * progress * (3 - 2 * progress);
-        still.style.transform = `scale(${(ZOOM_FROM + (1 - ZOOM_FROM) * e).toFixed(4)})`;
+      // the scene opens out of focus (city lights as soft bokeh, a touch brighter) and racks
+      // into focus; nothing moves or scales
+      const f = Math.min(1, progress / FOCUS_END);
+      const e = f * f * (3 - 2 * f);
+      const blur = BLUR_MAX * (1 - e) * ((stage.clientWidth || window.innerWidth) / 1920);
+      const look = blur > 0.05 ? `blur(${blur.toFixed(2)}px) brightness(${(1 + 0.15 * (1 - e)).toFixed(3)})` : "none";
+      if (still) still.style.filter = look;
+      backdrop.setFilter(look);
+      // s07's gold -> the rendered burst (its matching gold frame first) -> sparks over black,
+      // and the valley fades in from the black under them
+      const ease = (x) => x * x * (3 - 2 * x);
+      const ramp = (a, b) => ease(Math.min(1, Math.max(0, (progress - a) / (b - a))));
+      const gk = ramp(0, GLOW_END);
+      glow.style.opacity = (1 - gk).toFixed(3);
+      glow.style.visibility = gk < 0.999 ? "inherit" : "hidden";
+      const bf = Math.min(1, progress / BURST_END);
+      const fi = Math.min(35, BURST_FIRST - 1 + Math.floor(bf * (36 - BURST_FIRST + 1)));
+      if (fi !== burstShown && burstFrames[fi].complete) {
+        burstEl.src = burstFrames[fi].src;
+        burstShown = fi;
       }
+      burstEl.style.visibility = progress < BURST_END ? "inherit" : "hidden";
+      const vb = ramp(VALLEY_IN[0], VALLEY_IN[1]);
+      veil.style.opacity = (1 - vb).toFixed(3);
+      veil.style.visibility = vb < 0.999 ? "inherit" : "hidden";
     },
     play() {
       if (running || reduceMotion()) return;
       running = true;
       last = performance.now();
-      if (!opened) {
-        // the scene opens ON a burst: one big gold shell, where the zoom is centred
-        opened = true;
-        burst(W * 0.5, H * 0.62, 0xffd27a, 300, 2.4);
-      }
-      launch();
-      nextShell = 0.55;
+      nextShell = 0.35; // first shell shortly after the opening burst is done (see frame())
       raf = requestAnimationFrame(frame);
     },
     pause() {
@@ -279,10 +343,14 @@ export function createFinale(section, { reduceMotion }) {
     dispose() {
       this.pause();
       window.removeEventListener("resize", resize);
+      backdrop.dispose();
       geometry.dispose();
       material.dispose();
       renderer.dispose();
       canvas.remove();
+      glow.remove();
+      veil.remove();
+      burstEl.remove();
     },
   };
 }

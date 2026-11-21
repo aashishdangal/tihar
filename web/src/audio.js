@@ -5,8 +5,9 @@
 //   motion: gain of the wind that follows how fast the frames move (scroll = camera move)
 // Sources are files in /audio/<src>.mp3 (built by scripts/build_audio.py, credits in
 // CREDITS.md) or generated here: "peck", "mala" (the garland going on), "tail_thump".
-// A source whose file is missing is skipped, not an error: s06's "deusi_loop" and
-// "madal_loop" are wired in scenes.json and stay silent until those files are added.
+// A source whose file is missing is skipped, not an error.
+// Optional per bed: `restart: true` (play from the head on each arrival). Optional per scene:
+// `fadeIn` / `fadeOut` seconds for the scene crossfade (default SCENE_FADE_S).
 // The page calls setPlace(sceneId, frame) on every animation frame. Audio can only start after
 // a user gesture: the first pointer/key press anywhere (the gate's सुरु) unlocks it.
 
@@ -179,11 +180,11 @@ function buffer(src) {
   return p;
 }
 
-function play(src, { gain = 1, rate = 1, loop = false, dest = master } = {}) {
+function play(src, { gain = 1, rate = 1, loop = false, dest = master, offset = null, onStart = null } = {}) {
   const b = buffers.get(src);
   if (!(b instanceof AudioBuffer)) {
     // not loaded yet: load, and start a loop when it arrives (a late one-shot is skipped)
-    if (loop) Promise.resolve(buffer(src)).then((bb) => bb && play(src, { gain, rate, loop, dest }));
+    if (loop) Promise.resolve(buffer(src)).then((bb) => bb && play(src, { gain, rate, loop, dest, offset, onStart }));
     else buffer(src);
     return null;
   }
@@ -194,25 +195,50 @@ function play(src, { gain = 1, rate = 1, loop = false, dest = master } = {}) {
   const g = ctx.createGain();
   g.gain.value = gain;
   s.connect(g).connect(dest);
-  // loops start at a random point so repeated beds don't phase
-  s.start(0, loop ? Math.random() * b.duration : 0);
-  return { s, g };
+  // loops start at a random point so repeated beds don't phase (unless told where)
+  s.start(0, offset ?? (loop ? Math.random() * b.duration : 0));
+  const node = { s, g };
+  onStart?.(node);
+  return node;
 }
 
 // ---- scene mixes --------------------------------------------------------------------------
+// A bed with `restart: true` is a performance, not an ambience: it plays from its first sample
+// every time you arrive in the scene (s06's Deusi starts on the owner's chosen 0:20), instead of
+// from a random point. A quick scroll out and back in while it is still audible does not restart.
+function startBed(st, bed) {
+  const dest = st.beds.get(bed);
+  const old = st.nodes.get(bed);
+  if (old) {
+    try {
+      old.s.stop();
+    } catch {
+      /* already stopped */
+    }
+  }
+  const node = play(bed.src, {
+    loop: true,
+    rate: bed.rate ?? 1,
+    dest,
+    offset: bed.restart ? 0 : null,
+    onStart: (n) => st.nodes.set(bed, n),
+  });
+  if (node) st.nodes.set(bed, node);
+}
+
 function sceneState(id) {
   if (scenesOn.has(id)) return scenesOn.get(id);
   const mix = mixes[id];
   const gain = ctx.createGain();
   gain.gain.value = 0;
   gain.connect(master);
-  const st = { gain, beds: new Map(), last: null, mix };
+  const st = { gain, beds: new Map(), nodes: new Map(), last: null, mix, leftAt: null };
   for (const bed of mix?.beds ?? []) {
     const bg = ctx.createGain();
     bg.gain.value = 0;
     bg.connect(gain);
     st.beds.set(bed, bg);
-    Promise.resolve(buffer(bed.src)).then(() => play(bed.src, { loop: true, rate: bed.rate ?? 1, dest: bg }));
+    startBed(st, bed);
   }
   for (const cue of mix?.cues ?? []) buffer(cue.src); // preload
   scenesOn.set(id, st);
@@ -243,6 +269,7 @@ function unlock() {
     motionGain.connect(hp).connect(lpf).connect(master);
     Promise.resolve(buffer("wind_loop")).then(() => play("wind_loop", { loop: true, rate: 0.8, dest: motionGain }));
     buffer("breath_in"); // the gate control needs it the moment the first press lands
+    buffer("fw_burst"); // the finale's bangs fire from the simulation, not from a cue list
     if (current) sceneState(current);
     if (new URLSearchParams(location.search).has("debug")) window.__audio = { ctx, scenesOn, mixes, motion: () => motion };
   }
@@ -255,16 +282,26 @@ export function setPlace(id, frame) {
   const dt = lastT ? Math.min(0.1, (now - lastT) / 1000) : 1 / 60;
   lastT = now;
   const moved = id === current && lastFrame != null ? frame - lastFrame : 0;
-  if (id !== current) current = id;
+  const entered = id !== current;
+  if (entered) current = id;
   lastFrame = frame;
   if (!ctx || ctx.state !== "running") return;
 
   const t = ctx.currentTime;
+  const fresh = !scenesOn.has(id);
   const st = sceneState(id);
-  // scene crossfade: the one in view up, the others down (and dropped once silent)
+  if (entered && !fresh && st.leftAt != null && t - st.leftAt > (st.mix?.fadeOut ?? SCENE_FADE_S)) {
+    for (const bed of st.mix?.beds ?? []) if (bed.restart) startBed(st, bed);
+  }
+  // scene crossfade: the one in view up, the others down. A scene may set its own fade times
+  // (s06: the Deusi rises in, and falls away under the brass plate of s07 rather than cutting).
   for (const [sid, s] of scenesOn) {
-    const target = sid === id ? 1 : 0;
-    s.gain.gain.setTargetAtTime(target, t, SCENE_FADE_S / 3);
+    const on = sid === id;
+    if (!on && s.leftAt == null) s.leftAt = t;
+    if (on) s.leftAt = null;
+    // the incoming scene's fadeIn, the outgoing scene's own fadeOut
+    const fadeS = on ? (s.mix?.fadeIn ?? SCENE_FADE_S) : (s.mix?.fadeOut ?? SCENE_FADE_S);
+    s.gain.gain.setTargetAtTime(on ? 1 : 0, t, fadeS / 3);
   }
   for (const [bed, g] of st.beds) {
     const want = keyed(bed.gain, frame) * (bed.onlyMoving ? moving : 1);
@@ -287,6 +324,42 @@ export function setPlace(id, frame) {
   const speed = Math.abs(moved) / dt;
   motion += (Math.min(1, speed / MOTION_FULL) - motion) * Math.min(1, dt * 4);
   motionGain.gain.setTargetAtTime(motion * (st.mix?.motion ?? 0), t, 0.1);
+}
+
+// ---- the finale's fireworks (web/src/finale.js) ---------------------------------------------
+// The fireworks are simulated live with random timing, so their sound cannot be keyed to scroll
+// frames: each shell calls this the moment it bursts on screen (owner, 2026-11-20: the bangs
+// must land with the bursts). It plays through s08's own scene gain, so it fades with the
+// scene and obeys the sound toggle. fw_burst.mp3 has 0.45 s of near-silence before the bang,
+// skipped here so the bang lands on the flash.
+const FW_LEAD_S = 0.44;
+const FW_MAX_VOICES = 7; // a sky full of shells is a roll of thunder, not a pile-up of clips
+let fwVoices = 0;
+
+/** pan -1..1 (left..right of the screen), size 1 = an ordinary shell, >1 a grand one */
+export function fireworkBurst({ pan = 0, size = 1 } = {}) {
+  if (!ctx || ctx.state !== "running") return;
+  if (fwVoices >= FW_MAX_VOICES) return;
+  const st = sceneState("s08_finale"); // the opening shell can burst before the tick places s08
+  const b = buffers.get("fw_burst");
+  if (!(b instanceof AudioBuffer)) {
+    buffer("fw_burst");
+    return;
+  }
+  const s = ctx.createBufferSource();
+  s.buffer = b;
+  // bigger shells are deeper and louder; each one a little different
+  s.playbackRate.value = (0.9 + Math.random() * 0.2) / Math.sqrt(size);
+  const g = ctx.createGain();
+  g.gain.value = Math.min(0.85, (0.32 + Math.random() * 0.2) * size);
+  const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (p) {
+    p.pan.value = Math.max(-1, Math.min(1, pan)) * 0.7;
+    s.connect(g).connect(p).connect(st.gain);
+  } else s.connect(g).connect(st.gain);
+  fwVoices++;
+  s.onended = () => fwVoices--;
+  s.start(0, FW_LEAD_S);
 }
 
 // ---- the gate's breath (web/src/breath.js) -------------------------------------------------
