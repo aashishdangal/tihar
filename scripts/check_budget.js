@@ -19,7 +19,7 @@ for (const scene of fs.readdirSync(FRAMES).sort()) {
     const dir = path.join(FRAMES, scene, set);
     if (!fs.existsSync(dir)) continue;
     const sizes = fs.readdirSync(dir)
-      .filter((f) => f.endsWith(".webp"))
+      .filter((f) => f.endsWith(".webp") || f.endsWith(".avif"))
       .map((f) => fs.statSync(path.join(dir, f)).size / 1024);
     if (!sizes.length) continue;
     const total = sizes.reduce((a, b) => a + b, 0);

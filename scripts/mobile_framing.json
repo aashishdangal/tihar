@@ -27,21 +27,27 @@
   "s01_hero": {
     "mode": "centre",
     "q_d": "lossless",
-    "q_m": 100
+    "q_m": 100,
+    "fmt": "avif"
   },
   "s02_legend": {
-    "mode": "centre"
+    "mode": "centre",
+    "fmt": "avif"
   },
   "s04_kukur": {
-    "mode": "centre"
+    "mode": "centre",
+    "fmt": "avif"
   },
   "s05_laxmi": {
-    "mode": "centre"
+    "mode": "centre",
+    "fmt": "avif"
   },
   "s06_govardhan": {
-    "mode": "centre"
+    "mode": "centre",
+    "fmt": "avif"
   },
   "s07_bhaitika": {
-    "mode": "centre"
+    "mode": "centre",
+    "fmt": "avif"
   }
 }

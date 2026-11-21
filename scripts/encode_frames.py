@@ -20,7 +20,7 @@ import tempfile
 from PIL import Image
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from webp_util import CWEBP, save_webp  # noqa: E402
+from webp_util import CWEBP, save_avif, save_webp  # noqa: E402
 
 
 scene = sys.argv[1]
@@ -36,6 +36,11 @@ MW, MH, FEATHER = 720, 1280, 48
 # s01 is lossless: its dense coloured city lights looked smeared even at lossy q100 (owner: size
 # budget doesn't matter for this scene, quality does).
 Q_D, Q_M = cfg.get("q_d", 100), cfg.get("q_m", 100)
+# "fmt": "avif" (2026-11-21, to fit the site on a host and a judge's connection): desktop and
+# mobile frames become AVIF 4:4:4 at "q_avif" (default 80); the old WebP of d/ and m/ moves to
+# renders/<scene>/webp_backup/ so nothing is lost. The low set (l/) stays WebP.
+FMT = cfg.get("fmt", "webp")
+Q_AVIF = cfg.get("q_avif", 80)
 
 
 def mobile_centre(im):
@@ -84,18 +89,38 @@ if not frames:
 (out / "m").mkdir(parents=True, exist_ok=True)
 mobile = mobile_fit if cfg["mode"] == "fit" else mobile_centre
 dt = mt = 0
-for p in frames:
+def encode_one(p):
     im = Image.open(p).convert("RGB")
-    d = out / "d" / f"{p.stem}.webp"
-    save_webp(p, d, Q_D)
-    m = out / "m" / f"{p.stem}.webp"
-    save_webp(mobile(im), m, Q_M)
-    dt += d.stat().st_size
-    mt += m.stat().st_size
-n = len(frames)
-print(f"encoder: {CWEBP or 'Pillow'}")
-subprocess.run([sys.executable, str(root / "scripts" / "make_low_set.py"), scene], check=True)
-print(f"{n} frames -> {out}  d {dt/1e6:.1f} MB ({dt/n/1e3:.0f} KB/frame)  m {mt/1e6:.1f} MB ({mt/n/1e3:.0f} KB/frame)")
-for name, (px, py) in cfg.get("points", {}).items():
-    mx, my = mobile_point(px, py, 1920, 1080)
-    print(f"point {name}: d ({px:.3f}, {py:.3f})  m ({mx:.3f}, {my:.3f})")
+    ext = FMT
+    d = out / "d" / f"{p.stem}.{ext}"
+    m = out / "m" / f"{p.stem}.{ext}"
+    if FMT == "avif":
+        save_avif(im, d, Q_AVIF)
+        save_avif(mobile(im), m, Q_AVIF)
+    else:
+        save_webp(p, d, Q_D)
+        save_webp(mobile(im), m, Q_M)
+    return d.stat().st_size, m.stat().st_size
+
+
+if __name__ == "__main__":
+    from concurrent.futures import ProcessPoolExecutor
+    if FMT == "avif":
+        for sub in ("d", "m"):
+            old = sorted((out / sub).glob("*.webp"))
+            if old:
+                bak = src / "webp_backup" / sub
+                bak.mkdir(parents=True, exist_ok=True)
+                for f in old:
+                    shutil.move(str(f), str(bak / f.name))
+    with ProcessPoolExecutor(max(1, (os.cpu_count() or 4) - 2)) as ex:
+        for ds, ms in ex.map(encode_one, frames):
+            dt += ds
+            mt += ms
+    n = len(frames)
+    print(f"encoder: {CWEBP or 'Pillow'}")
+    subprocess.run([sys.executable, str(root / "scripts" / "make_low_set.py"), scene], check=True)
+    print(f"{n} frames -> {out}  d {dt/1e6:.1f} MB ({dt/n/1e3:.0f} KB/frame)  m {mt/1e6:.1f} MB ({mt/n/1e3:.0f} KB/frame)")
+    for name, (px, py) in cfg.get("points", {}).items():
+        mx, my = mobile_point(px, py, 1920, 1080)
+        print(f"point {name}: d ({px:.3f}, {py:.3f})  m ({mx:.3f}, {my:.3f})")

@@ -1,4 +1,4 @@
-"""Shared WebP writer for the frame encoders."""
+"""Shared WebP / AVIF writers for the frame encoders."""
 import glob
 import os
 import shutil
@@ -32,3 +32,11 @@ def save_webp(im_or_path, dest, q):
     finally:
         if tmp:
             os.remove(tmp)
+
+
+def save_avif(im_or_path, dest, q=80):
+    """AVIF with full-resolution colour (4:4:4): lossy WebP is always 4:2:0, which is what smeared
+    the small coloured city lights; AVIF 4:4:4 q80 keeps them at ~1/7 the size of lossless WebP
+    (owner chose q80 on 2026-11-21 from renders/s01_hero/test/encode_compare_0110.png)."""
+    im = im_or_path if isinstance(im_or_path, Image.Image) else Image.open(im_or_path).convert("RGB")
+    im.save(dest, "AVIF", quality=q, subsampling="4:4:4", speed=6)

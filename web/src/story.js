@@ -107,7 +107,7 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
     set = next;
     for (const p of players) {
       p.seq?.close();
-      p.seq = new FrameSequence({ id: p.scene.id, count: p.scene.frames, set, maxDecoded: 28 });
+      p.seq = new FrameSequence({ id: p.scene.id, count: p.scene.frames, set, ext: p.scene.ext ?? "webp", maxDecoded: 28 });
       // the light set is kept alongside it and is what a moving scrub draws (see pick())
       if (!p.lo) p.lo = new FrameSequence({ id: p.scene.id, count: p.scene.frames, set: "l", maxDecoded: 40, quiet: true });
     }

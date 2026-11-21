@@ -1,4 +1,4 @@
-"""Low-end laptop frames: web/public/frames/<scene>/d/*.webp -> l/*.webp at 1280x720, lossy.
+"""Low-end laptop frames: web/public/frames/<scene>/d/*.webp|avif -> l/*.webp at 1280x720, lossy.
 
 Made from the desktop WebP (not the PNG renders), so the 'l' set always matches what the site
 shows. Picked by main.js on landscape screens under ~1600 physical px wide, or on devices with
@@ -21,10 +21,10 @@ for scene in scenes:
     src, out = root / scene / "d", root / scene / "l"
     out.mkdir(exist_ok=True)
     total = 0
-    files = sorted(src.glob("*.webp"))
+    files = sorted(src.glob("*.avif")) or sorted(src.glob("*.webp"))  # d/ may be AVIF now
     for f in files:
         im = Image.open(f).convert("RGB").resize((W, H), Image.LANCZOS)
-        dest = out / f.name
+        dest = out / (f.stem + ".webp")
         save_webp(im, dest, Q)
         total += dest.stat().st_size
     print(f"{scene}: {len(files)} frames -> l  {total/1e6:.1f} MB ({total/len(files)/1e3:.0f} KB/frame)")

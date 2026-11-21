@@ -63,7 +63,7 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
   glow.className = "finale__glow";
   glow.alt = "";
   glow.setAttribute("aria-hidden", "true");
-  glow.src = `/frames/s07_bhaitika/${window.innerWidth / window.innerHeight <= 1 ? "m" : "d"}/0272.webp`;
+  glow.src = `/frames/s07_bhaitika/${window.innerWidth / window.innerHeight <= 1 ? "m" : "d"}/0272.avif`; // s07 d/m are AVIF
   const veil = document.createElement("div"); // the black between the gold and the valley
   veil.className = "finale__veil";
   veil.setAttribute("aria-hidden", "true");

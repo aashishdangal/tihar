@@ -5,10 +5,10 @@
 const pad = (n) => String(n).padStart(4, "0");
 
 export class FrameSequence {
-  constructor({ id, count, set, maxDecoded = 12, quiet = false }) {
+  constructor({ id, count, set, ext = "webp", maxDecoded = 12, quiet = false }) {
     this.quiet = quiet; // the light set may be absent for a scene: fall back, don't shout
     this.count = count;
-    this.url = (i) => `${import.meta.env.BASE_URL}frames/${id}/${set}/${pad(i + 1)}.webp`;
+    this.url = (i) => `${import.meta.env.BASE_URL}frames/${id}/${set}/${pad(i + 1)}.${ext}`; // d/m may be AVIF (scenes.json "ext")
     this.blobs = new Array(count);
     this.bitmaps = new Map(); // frame index -> ImageBitmap
     this.pending = new Set();
