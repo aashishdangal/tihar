@@ -915,7 +915,8 @@ body.is-entered .diyos {
 .finale__line {
   position: fixed;
   left: 50%;
-  bottom: max(16vh, calc(env(safe-area-inset-bottom) + 96px));
+  /* owner 2026-11-21: above the mountains (was near the bottom of the screen) */
+  top: max(6vh, calc(env(safe-area-inset-top) + 56px));
   z-index: 4;
   width: min(820px, calc(100vw - 32px));
   margin: 0;
@@ -937,6 +938,24 @@ body.is-entered .diyos {
 .finale__line.is-shown {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* written in sparks (finaleSparkText.js): the crisp text's opacity is driven by --ink as the
+   sparks land, and the line does not slide */
+.finale__line.is-spark,
+.finale__line.is-spark.is-shown {
+  opacity: var(--ink, 0);
+  transform: translate(-50%, 0);
+  transition: none;
+}
+
+.finale__sparks {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5;
+  pointer-events: none;
 }
 
 .finale__end {
@@ -961,13 +980,65 @@ body.is-entered .diyos {
   pointer-events: auto;
 }
 
+/* शुभ तिहार, gilded (owner 2026-11-21): carved gold with a raking highlight that sits where the
+   last firework burst (--fx) and flares with it (--flash, finale.js). No letter-spacing. */
 .finale__title {
+  --flash: 0;
+  --fx: 50%;
   margin: 0;
+  padding: 0.08em 0.12em 0.18em;
   font-weight: 800;
-  font-size: clamp(44px, 9vw, 128px);
+  font-size: clamp(48px, 10vw, 148px);
   line-height: 1.1;
+  /* owner 2026-11-21: white with a shining look (was gold): a soft silver-white body, a bright
+     sheen that sweeps across on its own every few seconds, and a flare at each firework burst */
+  color: transparent;
+  background:
+    linear-gradient(105deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%, transparent 100%)
+      var(--sheen, -150%) 0 / 60% 100% no-repeat,
+    linear-gradient(
+      100deg,
+      #c9ced8 0%,
+      #eef1f6 calc(var(--fx) - 18%),
+      #ffffff var(--fx),
+      #e8ebf2 calc(var(--fx) + 18%),
+      #c4c9d4 100%
+    );
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 0 rgba(40, 44, 60, 0.9)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 calc(16px + var(--flash) * 36px) rgba(255, 244, 220, calc(0.35 + var(--flash) * 0.5)))
+    brightness(calc(1 + var(--flash) * 0.35));
+  animation: title-sheen 4.5s ease-in-out infinite;
+}
+
+@property --sheen {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: -150%;
+}
+
+@keyframes title-sheen {
+  0%, 55% { --sheen: -150%; }
+  100% { --sheen: 250%; }
+}
+
+/* the GitHub mark sits beside फेरि हेर्नुहोस् as a round button of the same height */
+.finale__actions .finale__src {
+  display: inline-grid;
+  place-items: center;
+  /* exactly as tall as फेरि हेर्नुहोस् (its height comes from the flex row), and round */
+  align-self: stretch;
+  height: auto;
+  width: auto;
+  aspect-ratio: 1;
+  margin-top: 0; /* the old standalone mark sat 22 px below, dimmed */
+  opacity: 0.9;
+  padding: 0;
+  border: 1px solid var(--cream-line);
+  border-radius: 999px;
+  background: rgba(8, 10, 24, 0.5);
   color: var(--cream);
-  text-shadow: 0 0 46px rgba(242, 163, 58, 0.5), 0 2px 18px rgba(0, 0, 0, 0.8);
 }
 
 .finale__actions {
@@ -1021,5 +1092,8 @@ body.is-entered .diyos {
   .finale__line,
   .finale__end {
     transition: none;
+  }
+  .finale__title {
+    animation: none;
   }
 }

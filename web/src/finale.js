@@ -9,6 +9,7 @@
 // rather than reallocated.
 
 import { createBackdrop } from "./finaleBackdrop.js";
+import { createSparkText } from "./finaleSparkText.js";
 import {
   AdditiveBlending,
   BufferAttribute,
@@ -49,6 +50,11 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
 
   // the hilltop view: clean still + flag loop + swaying tree, kite and grass (finaleBackdrop.js)
   const backdrop = createBackdrop(stage, still);
+  // the closing शुभ तिहार is gilded and lit by the fireworks: each burst flares across the gold
+  // where it opened (owner 2026-11-21 chose "gilded, firework-lit")
+  const title = section.querySelector(".finale__title");
+  let titleFlash = 0;
+  let sparkText = null;
 
   // the hidden cut from scene 7 (owner 2026-11-21: "the 2nd last scene ends in golden ... make it
   // seamless"): s07 ends on a full-frame warm gold glow, so scene 8 opens on that exact frame, laid
@@ -202,6 +208,10 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
     const speed = (300 + Math.random() * 330) * grand;
     // the bang, on the same frame as the flash (audio.js fireworkBurst)
     onBurst?.({ pan: (x / W) * 2 - 1, size: grand });
+    if (title) {
+      titleFlash = Math.min(1, titleFlash + 0.55 * grand);
+      title.style.setProperty("--fx", `${((x / W) * 100).toFixed(1)}%`);
+    }
     for (let k = 0; k < count; k++) {
       const i = take();
       kind[i] = 2;
@@ -255,6 +265,10 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     backdrop.tick(dt);
+    if (title && titleFlash > 0.002) {
+      titleFlash *= Math.exp(-2.6 * dt);
+      title.style.setProperty("--flash", titleFlash.toFixed(3));
+    }
     // no other firework until the rendered opening burst has finished (owner 2026-11-21: "other
     // firework should only start after our main transition firework finishes")
     if (progress < BURST_END) nextShell = 0.35;
@@ -278,6 +292,8 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
       resize();
       window.addEventListener("resize", resize);
       backdrop.load();
+      // the two lines over the valley are written in firework sparks (finaleSparkText.js)
+      sparkText = createSparkText([...section.querySelectorAll(".finale__line")], { reduceMotion });
       renderer.render(scene, camera);
     },
 
@@ -344,6 +360,7 @@ export function createFinale(section, { reduceMotion, onBurst = null }) {
       this.pause();
       window.removeEventListener("resize", resize);
       backdrop.dispose();
+      sparkText?.dispose();
       geometry.dispose();
       material.dispose();
       renderer.dispose();

@@ -70,7 +70,7 @@ const POWDER_OUT_MS = 680;
 const GRAV = 4200; // px/s^2: the world is measured in pixels, so gravity is too
 const SWING_DRAG = 0.985; // air: how much of each bead's momentum survives a frame
 const GOLD = 0xd8a73f; // the murti's gilding
-const PEARL = 0xe98ba8; // and the pink pearls set into it
+const ROSE = 0xff6f9c; // owner 2026-11-21: the Laxmi caption itself is pink (the statue's beads), its pearls gold
 const LAMP_I = 5200; // candela, in a world measured in pixels
 const MALA_HEADS = 9; // how many flowers on each strand
 const POINTER_REACH = 130; // px around the cursor that actually disturbs the flowers
@@ -690,7 +690,9 @@ export function createCaption3D({ reduceMotion }) {
   let pointerVX = 0;
   let lastPX = null;
   let lastPT = 0;
-  let pointerAt = null; // the surface the words lie on: invisible, but it catches their shadow
+  let pointerAt = null;
+  let giltHome = null; // gilt captions: where the light rests when no pointer is over them
+  let giltRect = null; // and the words' box on screen (px), which is what counts as hovering them // the surface the words lie on: invisible, but it catches their shadow
   let smokeTimer = 0;
   const smokeUniforms = {
     uReveal: { value: 1 },
@@ -1281,11 +1283,11 @@ export function createCaption3D({ reduceMotion }) {
         if (style.gilt) {
           // gilded like the murti: real metal, so it needs the room above to reflect
           scene.environment = roomEnv(renderer);
-          mat.color.setHex(GOLD);
+          mat.color.setHex(ROSE);
           mat.metalness = 0.72; // full metal with only a dim room to reflect renders near-black
           mat.roughness = 0.34;
           mat.envMapIntensity = 2.6;
-          mat.emissive = new Color(0x4a3108); // a floor of warmth, so it is legible unlit
+          mat.emissive = new Color(0x6e1c3a); // a floor of rose, so it is legible unlit (brighter, owner 2026-11-21)
           mat.emissiveIntensity = 0.9;
           mat.normalMap = carveNormals(ctx, cw, ch);
           mat.normalScale.set(0.55, 0.55);
@@ -1306,8 +1308,8 @@ export function createCaption3D({ reduceMotion }) {
           mat.color.setHex(RICE);
           mat.roughness = 0.95; // rice has no shine
           mat.metalness = 0;
-          mat.emissive = new Color(0x8b7c56);
-          mat.emissiveIntensity = 1.25; // rice on a dark floor needs its own light
+          mat.emissive = new Color(0xb8a77a);
+          mat.emissiveIntensity = 1.7; // rice on a dark floor needs its own light (brighter: it was unreadable)
           mat.transparent = true;
         }
         if (style.door) {
@@ -1355,7 +1357,8 @@ export function createCaption3D({ reduceMotion }) {
           addPowder(mat, tika, i * 0.137);
         }
         if (style.grain) {
-          const px = (r.height / 1.3) * 0.15; // a grain, in screen pixels: coarse enough to see
+          // owner 2026-11-21: "deusi bhailo is unreadable" -> finer grains (were 0.15 of the type size)
+          const px = (r.height / 1.3) * 0.07; // a grain, in screen pixels
           addGrain(mat, grainUniforms, new Vector2(Math.round(cw / px), Math.round(ch / px)));
         }
         const mesh = new Mesh(new PlaneGeometry(w, h), mat);
@@ -1434,6 +1437,16 @@ export function createCaption3D({ reduceMotion }) {
         root.add(door);
       }
       if (style.gilt) {
+        // owner 2026-11-21: the SHINY gilt is the caption's normal look and it goes dark under the
+        // pointer (was the other way round), so the light rests in front of the words by default
+        {
+          const gl = Math.min(...rects.map((r) => r.left)), gr = Math.max(...rects.map((r) => r.right));
+          const gt = Math.min(...rects.map((r) => r.top)), gb = Math.max(...rects.map((r) => r.bottom));
+          giltHome = toWorld((gl + gr) / 2, gt - (gb - gt) * 0.6); // a little above: it rakes the carving
+          giltRect = { l: gl - 24, r: gr + 24, t: gt - 24, b: gb + 24 };
+          flame.position.set(giltHome[0], giltHome[1], 120);
+          flame.intensity = reduceMotion() ? FLAME_I * 0.5 : FLAME_I;
+        }
         // A few pearls, set in the gaps BETWEEN words rather than strung along every bar: on
         // the murti they punctuate the gilding, they do not cover it. One every other gap, so
         // a nine-word line wears four, and none of them sits on a letter.
@@ -1454,16 +1467,16 @@ export function createCaption3D({ reduceMotion }) {
             const pearl = new Mesh(
               geom.clone(),
               new MeshPhysicalMaterial({
-                color: PEARL,
-                // a pearl is lit, never lit up: no emissive, a hard clearcoat for the highlight,
-                // and the room to reflect, which is what gives it its depth
-                roughness: 0.22,
-                metalness: 0,
+                color: GOLD, // owner 2026-11-21: gold beads on the pink words (was pink pearls)
+                // lit, never lit up: no emissive, a hard clearcoat for the highlight, and the
+                // room to reflect, which is what gives it its depth
+                roughness: 0.26,
+                metalness: 0.9,
                 clearcoat: 1,
                 clearcoatRoughness: 0.06,
                 sheen: 0.8,
-                sheenColor: new Color(0xfff0f4),
-                iridescence: 0.35,
+                sheenColor: new Color(0xffe2a0),
+                iridescence: 0,
                 iridescenceIOR: 1.25,
                 envMapIntensity: 2.2,
               })
@@ -1629,7 +1642,16 @@ export function createCaption3D({ reduceMotion }) {
         if (strands.length) startSwing();
         if (lamps.length) touchLamps(px, py);
       }
-      if (px === null) {
+      if (style.gilt) {
+        // inverted for the gilt: lit at rest, dark while the pointer is over the words
+        const over = px !== null && giltRect && px >= giltRect.l && px <= giltRect.r && py >= giltRect.t && py <= giltRect.b;
+        if (!over && giltHome) {
+          flame.position.set(giltHome[0], giltHome[1], 120);
+          flame.intensity = reduceMotion() ? FLAME_I * 0.5 : FLAME_I;
+        } else {
+          flame.intensity = 0;
+        }
+      } else if (px === null) {
         flame.intensity = 0;
         for (const b of bulbs) {
           b.light.intensity = BULB_IDLE;

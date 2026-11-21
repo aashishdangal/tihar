@@ -436,7 +436,8 @@ export function initStory({ stage, scenes, pickSet, reduceMotion }) {
         // The tick does the placing (above) so the mix keeps moving when the scroll stops.
         finaleP = p;
         // each line holds its own stretch of the climb, then gives way to the next
-        lines[0]?.classList.toggle("is-shown", p > 0.1 && p < 0.42);
+        // line 1 waits for the opening firework and the valley coming up out of the black
+        lines[0]?.classList.toggle("is-shown", p > 0.18 && p < 0.44);
         lines[1]?.classList.toggle("is-shown", p > 0.47 && p < 0.78);
         end?.classList.toggle("is-shown", p > 0.84);
       },
