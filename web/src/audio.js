@@ -27,6 +27,12 @@ const MASTER = 0.9;
 const mixes = Object.fromEntries(scenes.filter((s) => s.sound).map((s) => [s.id, s.sound]));
 
 let ctx = null;
+// A phone may only start audio when the finger lifts off सुरु, and waking the context then takes
+// a moment; the blow cue fires ~60 ms after release. Sounds asked for while it wakes are now
+// scheduled (they start the instant it runs) instead of dropped: scene 0 was silent on phones
+// (owner, 2026-11-21).
+let resuming = false;
+const live = () => ctx && (ctx.state === "running" || resuming);
 let master = null;
 let motionGain = null;
 const buffers = new Map(); // src -> AudioBuffer | Promise
@@ -274,7 +280,15 @@ function unlock() {
     if (new URLSearchParams(location.search).has("debug")) window.__audio = { ctx, scenesOn, mixes, motion: () => motion };
   }
   // "interrupted" is iOS after a call or a trip to another app
-  if (ctx.state !== "running" && ctx.state !== "closed" && isSoundOn()) ctx.resume().catch(() => {});
+  // ask again on every gesture: a resume() from a finger going down is not allowed and may
+  // never settle, so only the one from the finger lifting starts the sound
+  if (ctx.state !== "running" && ctx.state !== "closed" && isSoundOn()) {
+    resuming = true;
+    ctx.resume().then(
+      () => (resuming = false),
+      () => (resuming = false),
+    );
+  }
 }
 
 /** Called every animation frame with the scene on screen and its (fractional) frame. */
@@ -286,7 +300,7 @@ export function setPlace(id, frame) {
   const entered = id !== current;
   if (entered) current = id;
   lastFrame = frame;
-  if (!ctx || ctx.state !== "running") return;
+  if (!live()) return;
 
   const t = ctx.currentTime;
   const fresh = !scenesOn.has(id);
@@ -339,7 +353,7 @@ let fwVoices = 0;
 
 /** pan -1..1 (left..right of the screen), size 1 = an ordinary shell, >1 a grand one */
 export function fireworkBurst({ pan = 0, size = 1 } = {}) {
-  if (!ctx || ctx.state !== "running") return;
+  if (!live()) return;
   if (fwVoices >= FW_MAX_VOICES) return;
   const st = sceneState("s08_finale"); // the opening shell can burst before the tick places s08
   const b = buffers.get("fw_burst");
@@ -371,7 +385,7 @@ let breathNode = null;
 
 export function playBreath(gain = 0.55) {
   unlock();
-  if (!ctx || ctx.state !== "running") return;
+  if (!live()) return;
   stopBreath(0.02);
   breathNode = play("breath_in", { gain, dest: master });
 }
